@@ -1,0 +1,6 @@
+**/*.test.ts
+**/*.test.js
+node_modules
+dist
+jest.setup.ts
+jest.config.js 

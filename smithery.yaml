@@ -1,0 +1,30 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - webscrapingAiApiKey
+    properties:
+      webscrapingAiApiKey:
+        type: string
+        description: Your WebScraping.AI API key. Required for API usage.
+      webscrapingAiApiUrl:
+        type: string
+        description: Custom API endpoint. Default is https://api.webscraping.ai.
+      webscrapingAiConcurrencyLimit:
+        type: integer
+        description: Maximum concurrent requests allowed (default 5).
+  commandFunction:
+    # A function that produces the CLI command to start the MCP on stdio.
+    |-
+    (config) => ({ 
+      command: 'node', 
+      args: ['src/index.js'], 
+      env: { 
+        WEBSCRAPING_AI_API_KEY: config.webscrapingAiApiKey,
+        WEBSCRAPING_AI_CONCURRENCY_LIMIT: String(config.webscrapingAiConcurrencyLimit || 5)
+      } 
+    }) 

@@ -1,6 +1,6 @@
 {
   "name": "webscraping-ai-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Model Context Protocol server for WebScraping.AI API. Provides LLM-powered web scraping tools with Chromium JavaScript rendering, rotating proxies, and HTML parsing.",
   "type": "module",
   "bin": {

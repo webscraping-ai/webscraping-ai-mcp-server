@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import axios from 'axios';
 import dotenv from 'dotenv';
@@ -123,7 +124,7 @@ const client = new WebScrapingAIClient();
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.0.0'
+  version: '1.0.1'
 });
 
 // Common options schema for all tools
@@ -151,7 +152,7 @@ server.tool(
   },
   async ({ url, question, ...options }) => {
     try {
-      const result = await client.question(url, question, extractOptions(options));
+      const result = await client.question(url, question, options);
       return {
         content: [{ type: 'text', text: result }]
       };
@@ -173,7 +174,7 @@ server.tool(
   },
   async ({ url, fields, ...options }) => {
     try {
-      const result = await client.fields(url, fields, extractOptions(options));
+      const result = await client.fields(url, fields, options);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
       };
@@ -196,7 +197,7 @@ server.tool(
   },
   async ({ url, return_script_result, format, ...options }) => {
     try {
-      const result = await client.html(url, { ...extractOptions(options), return_script_result });
+      const result = await client.html(url, { ...options, return_script_result });
       if (format === 'json') {
         return {
           content: [{ type: 'text', text: JSON.stringify({ html: result }) }]
@@ -226,7 +227,7 @@ server.tool(
   async ({ url, text_format, return_links, ...options }) => {
     try {
       const result = await client.text(url, { 
-        ...extractOptions(options), 
+        ...options, 
         text_format, 
         return_links 
       });
@@ -253,7 +254,7 @@ server.tool(
   },
   async ({ url, selector, format, ...options }) => {
     try {
-      const result = await client.selected(url, selector, extractOptions(options));
+      const result = await client.selected(url, selector, options);
       if (format === 'json') {
         return {
           content: [{ type: 'text', text: JSON.stringify({ html: result }) }]
@@ -281,7 +282,7 @@ server.tool(
   },
   async ({ url, selectors, ...options }) => {
     try {
-      const result = await client.selectedMultiple(url, selectors, extractOptions(options));
+      const result = await client.selectedMultiple(url, selectors, options);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
       };
@@ -312,24 +313,9 @@ server.tool(
   }
 );
 
-// Helper function to extract and normalize options
-function extractOptions(options) {
-  const normalizedOptions = { ...options };
-  
-  // Convert js_timeout to jsTimeout for API compatibility
-  if (normalizedOptions.js_timeout) {
-    normalizedOptions.jsTimeout = normalizedOptions.js_timeout;
-    delete normalizedOptions.js_timeout;
-  }
-  
-  return normalizedOptions;
-}
-
-import('@modelcontextprotocol/sdk/server/stdio.js').then(({ StdioServerTransport }) => {
-  const transport = new StdioServerTransport();
-  server.connect(transport).then(() => {
-  }).catch(err => {
-    console.error('Failed to connect to transport:', err);
-    process.exit(1);
-  });
+const transport = new StdioServerTransport();
+server.connect(transport).then(() => {
+}).catch(err => {
+  console.error('Failed to connect to transport:', err);
+  process.exit(1);
 });

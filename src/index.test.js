@@ -6,6 +6,8 @@ import {
   beforeEach,
   afterEach,
 } from '@jest/globals';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 // Create mock WebScrapingAIClient
 class MockWebScrapingAIClient {
@@ -183,6 +185,55 @@ describe('WebScraping.AI MCP Server Tests', () => {
 
     expect(response.isError).toBe(true);
     expect(response.content[0].text).toContain('Unknown tool');
+  });
+
+  // Test MCP Client Connection
+  test('should connect to MCP server and list tools', async () => {
+    const transport = new StdioClientTransport({
+      command: "node",
+      args: ["src/index.js"]
+    });
+
+    const client = new Client({
+      name: "webscraping-ai-test-client",
+      version: "1.0.0"
+    });
+
+    await client.connect(transport);
+    const response = await client.listTools();
+    
+    expect(response.tools).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'webscraping_ai_question',
+        inputSchema: expect.any(Object)
+      }),
+      expect.objectContaining({
+        name: 'webscraping_ai_fields',
+        inputSchema: expect.any(Object)
+      }),
+      expect.objectContaining({
+        name: 'webscraping_ai_html',
+        inputSchema: expect.any(Object)
+      }),
+      expect.objectContaining({
+        name: 'webscraping_ai_text',
+        inputSchema: expect.any(Object)
+      }),
+      expect.objectContaining({
+        name: 'webscraping_ai_selected',
+        inputSchema: expect.any(Object)
+      }),
+      expect.objectContaining({
+        name: 'webscraping_ai_selected_multiple',
+        inputSchema: expect.any(Object)
+      }),
+      expect.objectContaining({
+        name: 'webscraping_ai_account',
+        inputSchema: expect.any(Object)
+      })
+    ]));
+
+    await client.close();
   });
 });
 

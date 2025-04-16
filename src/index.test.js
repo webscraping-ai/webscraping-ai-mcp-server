@@ -233,7 +233,7 @@ describe('WebScraping.AI MCP Server Tests', () => {
       })
     ]));
 
-    await client.close();
+    await transport.close();
   });
 });
 

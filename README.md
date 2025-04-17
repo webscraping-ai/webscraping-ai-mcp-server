@@ -38,24 +38,34 @@ npm install
 npm start
 ```
 
-### Running on Cursor
-
-Configuring Cursor 
+### Configuring in Cursor
 Note: Requires Cursor version 0.45.6+
 
-To configure WebScraping.AI MCP in Cursor:
+The WebScraping.AI MCP server can be configured in two ways in Cursor:
 
-1. Open Cursor Settings
-2. Go to Features > MCP Servers 
-3. Click "+ Add New MCP Server"
-4. Enter the following:
-   - Name: "webscraping-ai-mcp" (or your preferred name)
-   - Type: "command"
-   - Command: `env WEBSCRAPING_AI_API_KEY=your-api-key npx -y webscraping-ai-mcp`
+1. **Project-specific Configuration** (recommended for team projects):
+   Create a `.cursor/mcp.json` file in your project directory:
+   ```json
+   {
+     "servers": {
+       "webscraping-ai": {
+         "type": "command",
+         "command": "npx -y webscraping-ai-mcp",
+         "env": {
+           "WEBSCRAPING_AI_API_KEY": "your-api-key",
+           "WEBSCRAPING_AI_CONCURRENCY_LIMIT": "5"
+         }
+       }
+     }
+   }
+   ```
 
-> If you are using Windows and are running into issues, try `cmd /c "set WEBSCRAPING_AI_API_KEY=your-api-key && npx -y webscraping-ai-mcp"`
+2. **Global Configuration** (for personal use across all projects):
+   Create a `~/.cursor/mcp.json` file in your home directory with the same configuration format as above.
 
-Replace `your-api-key` with your WebScraping.AI API key.
+> If you are using Windows and are running into issues, try using `cmd /c "set WEBSCRAPING_AI_API_KEY=your-api-key && npx -y webscraping-ai-mcp"` as the command.
+
+This configuration will make the WebScraping.AI tools available to Cursor's AI agent automatically when relevant for web scraping tasks.
 
 ### Running on Claude Desktop
 
@@ -381,27 +391,34 @@ This server implements the [Model Context Protocol](https://github.com/facebookr
 ### Example: Configuring Claude with MCP
 
 ```javascript
-// Example code for connecting Claude with the WebScraping.AI MCP Server
 const { Claude } = require('@anthropic-ai/sdk');
-const { McpClient } = require('@modelcontextprotocol/sdk/client');
+const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 
 const claude = new Claude({
-  apiKey: 'your_claude_api_key'
+  apiKey: process.env.ANTHROPIC_API_KEY
 });
 
-const mcpClient = new McpClient({
-  baseUrl: 'http://localhost:3000/sse'
+const transport = new StdioClientTransport({
+  command: 'npx',
+  args: ['-y', 'webscraping-ai-mcp'],
+  env: {
+    WEBSCRAPING_AI_API_KEY: 'your-api-key'
+  }
 });
+
+const client = new Client({
+  name: 'claude-client',
+  version: '1.0.0'
+});
+
+await client.connect(transport);
 
 // Now you can use Claude with WebScraping.AI tools
-const response = await claude.messages.create({
-  model: 'claude-3-opus-20240229',
-  max_tokens: 1000,
-  system: 'You have access to WebScraping.AI tools for web data extraction.',
-  messages: [
-    { role: 'user', content: 'Extract the main heading from https://example.com' }
-  ],
-  tools: await mcpClient.listTools()
+const tools = await client.listTools();
+const response = await claude.complete({
+  prompt: 'What is the main topic of example.com?',
+  tools: tools
 });
 ```
 

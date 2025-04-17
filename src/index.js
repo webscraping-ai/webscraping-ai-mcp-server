@@ -128,7 +128,7 @@ const client = new WebScrapingAIClient();
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.0.1'
+  version: '1.0.2'
 });
 
 // Common options schema for all tools

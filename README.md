@@ -40,7 +40,7 @@ npm start
 
 ### Running on Cursor
 
-Configuring Cursor 🖥️
+Configuring Cursor 
 Note: Requires Cursor version 0.45.6+
 
 To configure WebScraping.AI MCP in Cursor:
@@ -86,19 +86,26 @@ Add this to your `claude_desktop_config.json`:
   - Required for all operations
   - Get your API key from [WebScraping.AI](https://webscraping.ai)
 
-##### Concurrency Configuration
-
+#### Optional Configuration
 - `WEBSCRAPING_AI_CONCURRENCY_LIMIT`: Maximum number of concurrent requests (default: `5`)
+- `WEBSCRAPING_AI_DEFAULT_PROXY_TYPE`: Type of proxy to use (default: `residential`)
+- `WEBSCRAPING_AI_DEFAULT_JS_RENDERING`: Enable/disable JavaScript rendering (default: `true`)
+- `WEBSCRAPING_AI_DEFAULT_TIMEOUT`: Maximum web page retrieval time in ms (default: `15000`, max: `30000`)
+- `WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT`: Maximum JavaScript rendering time in ms (default: `2000`)
 
 ### Configuration Examples
 
-For standard usage with custom concurrency setting:
-
+For standard usage:
 ```bash
 # Required
 export WEBSCRAPING_AI_API_KEY=your-api-key
-# Optional
-export WEBSCRAPING_AI_CONCURRENCY_LIMIT=10        # Increase concurrency limit
+
+# Optional - customize behavior (default values)
+export WEBSCRAPING_AI_CONCURRENCY_LIMIT=5
+export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter or residential
+export WEBSCRAPING_AI_DEFAULT_JS_RENDERING=true
+export WEBSCRAPING_AI_DEFAULT_TIMEOUT=15000
+export WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT=2000
 ```
 
 ## Available Tools

@@ -13,6 +13,10 @@ dotenv.config();
 const WEBSCRAPING_AI_API_KEY = process.env.WEBSCRAPING_AI_API_KEY || '';
 const WEBSCRAPING_AI_API_URL = 'https://api.webscraping.ai';
 const CONCURRENCY_LIMIT = Number(process.env.WEBSCRAPING_AI_CONCURRENCY_LIMIT || 5);
+const DEFAULT_PROXY_TYPE = process.env.WEBSCRAPING_AI_DEFAULT_PROXY_TYPE || 'residential';
+const DEFAULT_JS_RENDERING = process.env.WEBSCRAPING_AI_DEFAULT_JS_RENDERING !== 'false';
+const DEFAULT_TIMEOUT = Number(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000);
+const DEFAULT_JS_TIMEOUT = Number(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000);
 
 // Validate required environment variables
 if (!WEBSCRAPING_AI_API_KEY) {
@@ -129,11 +133,11 @@ const server = new McpServer({
 
 // Common options schema for all tools
 const commonOptionsSchema = {
-  timeout: z.number().optional().default(15000).describe('Maximum web page retrieval time in ms (15000 by default, maximum is 30000).'),
-  js: z.boolean().optional().default(true).describe('Execute on-page JavaScript using a headless browser (true by default).'),
-  js_timeout: z.number().optional().default(2000).describe('Maximum JavaScript rendering time in ms (2000 by default).'),
+  timeout: z.number().optional().default(DEFAULT_TIMEOUT).describe(`Maximum web page retrieval time in ms (${DEFAULT_TIMEOUT} by default, maximum is 30000).`),
+  js: z.boolean().optional().default(DEFAULT_JS_RENDERING).describe(`Execute on-page JavaScript using a headless browser (${DEFAULT_JS_RENDERING} by default).`),
+  js_timeout: z.number().optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default).`),
   wait_for: z.string().optional().describe('CSS selector to wait for before returning the page content.'),
-  proxy: z.enum(['datacenter', 'residential']).optional().default('residential').describe('Type of proxy, datacenter or residential (residential by default).'),
+  proxy: z.enum(['datacenter', 'residential']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy, datacenter or residential (${DEFAULT_PROXY_TYPE} by default).`),
   country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in']).optional().describe('Country of the proxy to use (US by default).'),
   custom_proxy: z.string().optional().describe('Your own proxy URL in "http://user:password@host:port" format.'),
   device: z.enum(['desktop', 'mobile', 'tablet']).optional().describe('Type of device emulation.'),

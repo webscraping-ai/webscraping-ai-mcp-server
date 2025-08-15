@@ -1,4 +1,5 @@
 # WebScraping.AI MCP Server
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/webscraping-ai/webscraping-ai-mcp-server)](https://archestra.ai/mcp-catalog/webscraping-ai__webscraping-ai-mcp-server)
 
 A Model Context Protocol (MCP) server implementation that integrates with [WebScraping.AI](https://webscraping.ai) for web data extraction capabilities.
 

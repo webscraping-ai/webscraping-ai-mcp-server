@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/webscraping-ai-webscraping-ai-mcp-server-badge.png)](https://mseep.ai/app/webscraping-ai-webscraping-ai-mcp-server)
+
 # WebScraping.AI MCP Server
 
 A Model Context Protocol (MCP) server implementation that integrates with [WebScraping.AI](https://webscraping.ai) for web data extraction capabilities.

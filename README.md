@@ -17,6 +17,10 @@ A Model Context Protocol (MCP) server implementation that integrates with [WebSc
 - Account usage monitoring
 - Content sandboxing option - Wraps scraped content with security boundaries to help protect against prompt injection
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/webscraping-ai-webscraping-ai-mcp-server).
+
 ## Installation
 
 ### Running with npx

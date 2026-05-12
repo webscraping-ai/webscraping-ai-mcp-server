@@ -218,7 +218,7 @@ const commonOptionsSchema = {
   js: z.boolean().optional().default(DEFAULT_JS_RENDERING).describe(`Execute on-page JavaScript using a headless browser (${DEFAULT_JS_RENDERING} by default).`),
   js_timeout: z.number().optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default).`),
   wait_for: z.string().optional().describe('CSS selector to wait for before returning the page content.'),
-  proxy: z.enum(['datacenter', 'residential']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy, datacenter or residential (${DEFAULT_PROXY_TYPE} by default).`),
+  proxy: z.enum(['datacenter', 'residential', 'stealth']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, or stealth (${DEFAULT_PROXY_TYPE} by default). Use residential if the site restricts datacenter traffic, or stealth for the most heavily protected sites with advanced anti-bot detection. Residential and stealth requests cost more than datacenter — see the pricing page.`),
   country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in']).optional().describe('Country of the proxy to use (US by default).'),
   custom_proxy: z.string().optional().describe('Your own proxy URL in "http://user:password@host:port" format.'),
   device: z.enum(['desktop', 'mobile', 'tablet']).optional().describe('Type of device emulation.'),

@@ -9,7 +9,7 @@ A Model Context Protocol (MCP) server implementation that integrates with [WebSc
 - HTML content retrieval with JavaScript rendering
 - Plain text extraction from web pages
 - CSS selector-based content extraction
-- Multiple proxy types (datacenter, residential) with country selection
+- Multiple proxy types (datacenter, residential, stealth) with country selection
 - JavaScript rendering using headless Chrome/Chromium
 - Concurrent request management with rate limiting
 - Custom JavaScript execution on target pages
@@ -140,7 +140,7 @@ export WEBSCRAPING_AI_API_KEY=your-api-key
 
 # Optional - customize behavior (default values)
 export WEBSCRAPING_AI_CONCURRENCY_LIMIT=5
-export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter or residential
+export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter, residential, or stealth
 export WEBSCRAPING_AI_DEFAULT_JS_RENDERING=true
 export WEBSCRAPING_AI_DEFAULT_TIMEOUT=15000
 export WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT=2000
@@ -381,7 +381,7 @@ The following options can be used with all scraping tools:
 - `js`: Execute on-page JavaScript using a headless browser (true by default)
 - `js_timeout`: Maximum JavaScript rendering time in ms (2000 by default)
 - `wait_for`: CSS selector to wait for before returning the page content
-- `proxy`: Type of proxy, datacenter or residential (residential by default)
+- `proxy`: Type of proxy: `datacenter`, `residential`, or `stealth` (`residential` by default). Use `stealth` for the most heavily protected sites with advanced anti-bot detection — costs more than residential, see the pricing page.
 - `country`: Country of the proxy to use (US by default). Supported countries: us, gb, de, it, fr, ca, es, ru, jp, kr, in
 - `custom_proxy`: Your own proxy URL in "http://user:password@host:port" format
 - `device`: Type of device emulation. Supported values: desktop, mobile, tablet

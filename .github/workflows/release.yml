@@ -1,0 +1,63 @@
+name: Release
+
+# Publishes to npm when a GitHub Release is published. Uses npm trusted
+# publishing (OIDC) — no NPM_TOKEN in repo secrets.
+#
+# One-time setup at npmjs.com → webscraping-ai-mcp → Settings → Trusted
+# Publishers → add GitHub Actions:
+#   Organization or user: webscraping-ai
+#   Repository:           webscraping-ai-mcp-server
+#   Workflow filename:    release.yml
+#   Environment:          (leave empty)
+#
+# Release flow:
+#   1. Bump version in package.json + src/index.js, commit, push.
+#   2. Create a GitHub Release with tag vX.Y.Z (matching package.json).
+#   3. This workflow verifies the tag, runs tests, and publishes.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write  # required for npm provenance and trusted publishing
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          echo "Tag (stripped): $TAG"
+          echo "package.json:   $PKG"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG"
+            exit 1
+          fi
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+        env:
+          WEBSCRAPING_AI_API_KEY: ${{ secrets.WEBSCRAPING_AI_API_KEY || 'test-api-key' }}
+
+      - name: Publish
+        run: npm publish --provenance --access public

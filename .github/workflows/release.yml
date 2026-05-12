@@ -3,12 +3,16 @@ name: Release
 # Publishes to npm when a GitHub Release is published. Uses npm trusted
 # publishing (OIDC) — no NPM_TOKEN in repo secrets.
 #
-# One-time setup at npmjs.com → webscraping-ai-mcp → Settings → Trusted
-# Publishers → add GitHub Actions:
-#   Organization or user: webscraping-ai
-#   Repository:           webscraping-ai-mcp-server
-#   Workflow filename:    release.yml
-#   Environment:          (leave empty)
+# One-time setup:
+#   - npmjs.com → webscraping-ai-mcp → Settings → Trusted Publishers → add
+#     GitHub Actions:
+#       Organization or user: webscraping-ai
+#       Repository:           webscraping-ai-mcp-server
+#       Workflow filename:    release.yml
+#       Environment:          npm
+#   - GitHub repo → Settings → Environments → create environment "npm"
+#     (matches the SDK pattern: ruby uses "rubygems", python uses "pypi").
+#     Add reviewers there if you want an approval gate before publish.
 #
 # Release flow:
 #   1. Bump version in package.json + src/index.js, commit, push.
@@ -27,6 +31,7 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
+    environment: npm
     steps:
       - uses: actions/checkout@v4
 

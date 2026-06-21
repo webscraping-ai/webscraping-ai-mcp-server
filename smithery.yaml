@@ -23,8 +23,9 @@ startCommand:
     (config) => ({ 
       command: 'node', 
       args: ['src/index.js'], 
-      env: { 
+      env: {
         WEBSCRAPING_AI_API_KEY: config.webscrapingAiApiKey,
-        WEBSCRAPING_AI_CONCURRENCY_LIMIT: String(config.webscrapingAiConcurrencyLimit || 5)
-      } 
+        WEBSCRAPING_AI_CONCURRENCY_LIMIT: String(config.webscrapingAiConcurrencyLimit || 5),
+        ...(config.webscrapingAiApiUrl ? { WEBSCRAPING_AI_API_URL: config.webscrapingAiApiUrl } : {})
+      }
     }) 

@@ -11,7 +11,7 @@ dotenv.config();
 
 // Environment variables
 const WEBSCRAPING_AI_API_KEY = process.env.WEBSCRAPING_AI_API_KEY || '';
-const WEBSCRAPING_AI_API_URL = 'https://api.webscraping.ai';
+const WEBSCRAPING_AI_API_URL = process.env.WEBSCRAPING_AI_API_URL || 'https://api.webscraping.ai';
 const CONCURRENCY_LIMIT = Number(process.env.WEBSCRAPING_AI_CONCURRENCY_LIMIT || 5);
 const DEFAULT_PROXY_TYPE = process.env.WEBSCRAPING_AI_DEFAULT_PROXY_TYPE || 'residential';
 const DEFAULT_JS_RENDERING = process.env.WEBSCRAPING_AI_DEFAULT_JS_RENDERING !== 'false';
@@ -219,7 +219,7 @@ const commonOptionsSchema = {
   js_timeout: z.number().optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default).`),
   wait_for: z.string().optional().describe('CSS selector to wait for before returning the page content.'),
   proxy: z.enum(['datacenter', 'residential', 'stealth']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, or stealth (${DEFAULT_PROXY_TYPE} by default). Use residential if the site restricts datacenter traffic, or stealth for the most heavily protected sites with advanced anti-bot detection. Residential and stealth requests cost more than datacenter — see the pricing page.`),
-  country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in']).optional().describe('Country of the proxy to use (US by default).'),
+  country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in', 'hk', 'tr']).optional().describe('Country of the proxy to use (US by default).'),
   custom_proxy: z.string().optional().describe('Your own proxy URL in "http://user:password@host:port" format.'),
   device: z.enum(['desktop', 'mobile', 'tablet']).optional().describe('Type of device emulation.'),
   error_on_404: z.boolean().optional().describe('Return error on 404 HTTP status on the target page (false by default).'),

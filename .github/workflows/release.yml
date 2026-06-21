@@ -66,6 +66,17 @@ jobs:
             exit 1
           fi
 
+      - name: Verify tag matches src/index.js server version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          SRC=$(node -e "const fs=require('fs');const s=fs.readFileSync('src/index.js','utf8');const m=s.match(/new McpServer\(\s*\{[\s\S]*?version:\s*['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"]/);if(!m){console.error('could not find McpServer version in src/index.js');process.exit(2)}process.stdout.write(m[1])")
+          echo "Tag (stripped):  $TAG"
+          echo "src/index.js:    $SRC"
+          if [ "$TAG" != "$SRC" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match src/index.js McpServer version $SRC"
+            exit 1
+          fi
+
       - name: Lint
         run: npm run lint
 

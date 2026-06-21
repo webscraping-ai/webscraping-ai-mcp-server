@@ -209,7 +209,7 @@ function createSanitizedResponse(content, url, isError = false) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.0.4'
+  version: '1.0.5'
 });
 
 // Common options schema for all tools

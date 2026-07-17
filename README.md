@@ -1,6 +1,16 @@
 # WebScraping.AI MCP Server
 
-A Model Context Protocol (MCP) server implementation that integrates with [WebScraping.AI](https://webscraping.ai) for web data extraction capabilities.
+[![npm](https://img.shields.io/npm/v/webscraping-ai-mcp.svg)](https://www.npmjs.com/package/webscraping-ai-mcp)
+[![CI](https://github.com/webscraping-ai/webscraping-ai-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/webscraping-ai/webscraping-ai-mcp-server/actions/workflows/ci.yml)
+
+A Model Context Protocol (MCP) server implementation that integrates with
+[WebScraping.AI](https://webscraping.ai) for web data extraction capabilities —
+Chromium JavaScript rendering, rotating datacenter/residential/stealth proxies,
+and AI-powered question answering and structured field extraction on any page.
+
+[Sign up](https://webscraping.ai/auth/sign_up) to get an API key — the free
+trial includes 2,000 credits, no credit card required. See the
+[API documentation](https://webscraping.ai/docs) for the full parameter reference.
 
 ## Features
 
@@ -414,7 +424,7 @@ Example error response:
 
 ## Integration with LLMs
 
-This server implements the [Model Context Protocol](https://github.com/facebookresearch/modelcontextprotocol), making it compatible with any MCP-enabled LLM platforms. You can configure your LLM to use these tools for web scraping tasks.
+This server implements the [Model Context Protocol](https://modelcontextprotocol.io), making it compatible with any MCP-enabled LLM platforms. You can configure your LLM to use these tools for web scraping tasks.
 
 ### Example: Configuring Claude with MCP
 
@@ -476,6 +486,14 @@ npx @modelcontextprotocol/inspector node src/index.js
 2. Create your feature branch
 3. Run tests: `npm test`
 4. Submit a pull request
+
+## Links
+
+- [WebScraping.AI](https://webscraping.ai) — features, pricing, signup
+- [API documentation](https://webscraping.ai/docs)
+- [Dashboard](https://webscraping.ai/dashboard) — API key, usage, request builder
+- Other official clients: [Python](https://github.com/webscraping-ai/webscraping-ai-python) · [JavaScript](https://github.com/webscraping-ai/webscraping-ai-js) · [Ruby](https://github.com/webscraping-ai/webscraping-ai-ruby) · [PHP](https://github.com/webscraping-ai/webscraping-ai-php) · [Go](https://github.com/webscraping-ai/webscraping-ai-go) · [Java](https://github.com/webscraping-ai/webscraping-ai-java) · [.NET](https://github.com/webscraping-ai/webscraping-ai-dotnet) · [CLI](https://github.com/webscraping-ai/webscraping-ai-cli) · [n8n node](https://github.com/webscraping-ai/webscraping-ai-n8n)
+- Support: [support@webscraping.ai](mailto:support@webscraping.ai)
 
 ## License
 

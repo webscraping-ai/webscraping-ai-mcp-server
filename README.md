@@ -156,7 +156,7 @@ export WEBSCRAPING_AI_DEFAULT_TIMEOUT=15000
 export WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT=2000
 ```
 
-## Available Tools
+## Tools
 
 ### 1. Question Tool (`webscraping_ai_question`)
 

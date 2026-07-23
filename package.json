@@ -1,6 +1,7 @@
 {
   "name": "webscraping-ai-mcp",
-  "version": "1.0.6",
+  "version": "1.0.7",
+  "mcpName": "io.github.webscraping-ai/webscraping-ai",
   "description": "Model Context Protocol server for WebScraping.AI API. Provides LLM-powered web scraping tools with Chromium JavaScript rendering, rotating proxies, and HTML parsing.",
   "type": "module",
   "bin": {

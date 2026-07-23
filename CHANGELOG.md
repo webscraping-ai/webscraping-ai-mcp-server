@@ -2,6 +2,16 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## 1.0.7 — 2026-07-23
+
+### Added
+
+- Official MCP Registry support: `mcpName` (`io.github.webscraping-ai/webscraping-ai`) in `package.json` and a `server.json` manifest for `mcp-publisher`. Publishing to the official registry makes registry aggregators (PulseMCP etc.) sync correct metadata.
+
+### Changed
+
+- README: "Available Tools" section renamed to "Tools" (recognized by mcp.so's tool-list parser).
+
 ## 1.0.6 — 2026-07-17
 
 ### Changed

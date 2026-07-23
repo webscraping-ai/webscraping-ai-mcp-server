@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.webscraping-ai/webscraping-ai",
+  "title": "WebScraping.AI",
+  "description": "Model Context Protocol server for WebScraping.AI API. Provides LLM-powered web scraping tools with Chromium JavaScript rendering, rotating proxies, and HTML parsing.",
+  "websiteUrl": "https://webscraping.ai",
+  "repository": {
+    "url": "https://github.com/webscraping-ai/webscraping-ai-mcp-server",
+    "source": "github"
+  },
+  "version": "1.0.7",
+  "icons": [
+    {
+      "src": "https://webscraping.ai/android-chrome-512x512.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "webscraping-ai-mcp",
+      "version": "1.0.7",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "WEBSCRAPING_AI_API_KEY",
+          "description": "WebScraping.AI API key (get one at https://webscraping.ai)",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "WEBSCRAPING_AI_DEFAULT_PROXY_TYPE",
+          "description": "Default proxy type for requests",
+          "isRequired": false,
+          "format": "string",
+          "choices": ["residential", "datacenter"],
+          "default": "residential"
+        },
+        {
+          "name": "WEBSCRAPING_AI_DEFAULT_JS_RENDERING",
+          "description": "Enable JavaScript rendering by default",
+          "isRequired": false,
+          "format": "boolean",
+          "default": "true"
+        },
+        {
+          "name": "WEBSCRAPING_AI_CONCURRENCY_LIMIT",
+          "description": "Maximum concurrent API requests",
+          "isRequired": false,
+          "format": "number",
+          "default": "5"
+        }
+      ]
+    }
+  ]
+}

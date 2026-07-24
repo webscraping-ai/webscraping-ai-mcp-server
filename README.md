@@ -3,6 +3,12 @@
 [![npm](https://img.shields.io/npm/v/webscraping-ai-mcp.svg)](https://www.npmjs.com/package/webscraping-ai-mcp)
 [![CI](https://github.com/webscraping-ai/webscraping-ai-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/webscraping-ai/webscraping-ai-mcp-server/actions/workflows/ci.yml)
 
+> **Prefer zero setup?** Use the hosted [remote MCP server](https://webscraping.ai/integrations/mcp-server):
+> add `https://mcp.webscraping.ai/mcp` to your MCP client and sign in with your
+> WebScraping.AI account — OAuth handles auth, no API key or local install
+> needed. This repo is the open-source stdio version for self-hosting and
+> customization.
+
 A Model Context Protocol (MCP) server implementation that integrates with
 [WebScraping.AI](https://webscraping.ai) for web data extraction capabilities —
 Chromium JavaScript rendering, rotating datacenter/residential/stealth proxies,

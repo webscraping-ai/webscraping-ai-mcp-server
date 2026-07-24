@@ -1,0 +1,33 @@
+name: Publish to MCP Registry
+
+# Publishes server.json to the official MCP registry
+# (registry.modelcontextprotocol.io). Uses GitHub Actions OIDC — a workflow
+# running in this org's repo is automatically granted the
+# io.github.webscraping-ai/* namespace, so no login or secrets are needed.
+#
+# Run it manually (workflow_dispatch) after the npm release is live: the
+# registry validates that the npm package version in server.json exists and
+# carries a matching mcpName field.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+
+      - name: Login (GitHub Actions OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish

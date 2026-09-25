@@ -354,7 +354,7 @@ Example response:
 
 Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Costs 15 credits per search; failed searches are not charged. The scraping options below don't apply.
 
-Parameters: `q` (required, non-blank search query; whitespace-only is rejected), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer ≥ 1, `1` by default; the API caps it at 100).
+Parameters: `q` (required, non-blank search query; whitespace-only is rejected), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer 1–100, `1` by default; the API rejects values above 100 with a 400).
 
 ```json
 {

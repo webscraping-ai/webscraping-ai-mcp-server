@@ -8,6 +8,10 @@ All notable changes to `webscraping-ai-mcp` are documented in this file.
 
 - `webscraping_ai_serp` tool for the new `/serp` endpoint: Google search results as parsed JSON (`organic_results`, `related_searches`, `search_information`, `pagination`). Params `q` (required), `engine`, `gl`, `hl`, `page`; the scraping options (`js`, `proxy`, `timeout`...) don't apply. 15 credits per search, failed searches not charged. With `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` the result is sandboxed like the other content tools, with `Source: https://www.google.com/search?q=<query>` (RFC 3986 encoding, matching the remote server byte for byte).
 
+### Fixed
+
+- `webscraping_ai_selected_multiple` always returned `[[]]`: axios sent `selectors[]=h1&selectors[]=p`, which the API silently ignores. Arrays are now sent as repeated keys (`selectors=h1&selectors=p`).
+
 ## 1.0.7 — 2026-07-23
 
 ### Added

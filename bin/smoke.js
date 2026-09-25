@@ -129,7 +129,13 @@ try {
 
 for (const [name, args] of cases) {
   const text = await callTool(client, name, `webscraping_ai_${name}`, args);
-  if (text !== null) ok(name, text);
+  if (text === null) continue;
+  // The API answers mis-encoded selectors with an empty [[]] instead of an error.
+  if (name === 'selected_multiple' && JSON.parse(text).flat().length === 0) {
+    fail(name, `no matches (selectors not received?): ${text}`);
+    continue;
+  }
+  ok(name, text);
 }
 await client.close();
 

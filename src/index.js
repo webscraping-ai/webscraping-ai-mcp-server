@@ -41,7 +41,10 @@ class WebScrapingAIClient {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-      }
+      },
+      // The API reads repeated keys (selectors=h1&selectors=p); axios's default
+      // selectors[]=... is silently ignored and /selected-multiple returns [[]].
+      paramsSerializer: { indexes: null }
     });
 
     this.queue = new PQueue({ concurrency });

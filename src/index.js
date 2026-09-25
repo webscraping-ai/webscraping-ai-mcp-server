@@ -117,6 +117,13 @@ class WebScrapingAIClient {
     });
   }
 
+  async serp(q, options = {}) {
+    return this.request('/serp', {
+      q,
+      ...options
+    });
+  }
+
   async account() {
     return this.request('/account', {});
   }
@@ -180,6 +187,14 @@ ${boundary}`;
   }
 }
 
+// Search results have no page URL, so sandbox banners cite the equivalent Google
+// search URL. encodeURIComponent leaves !'()* unescaped; escaping them too matches
+// the remote server's ERB::Util.url_encode, so both banners are byte-identical.
+export function googleSearchUrl(q) {
+  const encoded = encodeURIComponent(q).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `https://www.google.com/search?q=${encoded}`;
+}
+
 // Create WebScrapingAI client
 const client = new WebScrapingAIClient();
 
@@ -209,7 +224,7 @@ function createSanitizedResponse(content, url, isError = false) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.0.7'
+  version: '1.1.0'
 });
 
 // Common options schema for all tools
@@ -341,6 +356,31 @@ server.tool(
       return createSanitizedResponse(JSON.stringify(result, null, 2), url);
     } catch (error) {
       return createSanitizedResponse(error.message, url, true);
+    }
+  }
+);
+
+// No commonOptionsSchema: /serp ignores the scraping options (js, proxy, timeout...).
+server.tool(
+  'webscraping_ai_serp',
+  'Search Google and get parsed results as JSON: organic_results (position, title, link, domain, displayed_link, ' +
+    'snippet, date), related_searches, search_information (including spelling corrections) and pagination. ' +
+    '10 results per page; position restarts at 1 on every page. Costs 15 credits per search; failed searches ' +
+    'are not charged. Use it to find pages, then read them with webscraping_ai_text or the other tools.',
+  {
+    q: z.string().min(1).describe('Search query.'),
+    engine: z.enum(['google']).optional().describe('Search engine to query (google by default).'),
+    gl: z.string().optional().describe('Two-letter country code for the search, e.g. us, gb, de (us by default).'),
+    hl: z.string().optional().describe('Two-letter language code for the results, e.g. en, de, fr (en by default).'),
+    page: z.number().int().min(1).optional().describe('Results page number, 10 results per page (1 by default).')
+  },
+  async ({ q, ...options }) => {
+    const source = googleSearchUrl(q);
+    try {
+      const result = await client.serp(q, options);
+      return createSanitizedResponse(JSON.stringify(result, null, 2), source);
+    } catch (error) {
+      return createSanitizedResponse(error.message, source, true);
     }
   }
 );

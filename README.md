@@ -25,6 +25,7 @@ trial includes 2,000 credits, no credit card required. See the
 - HTML content retrieval with JavaScript rendering
 - Plain text extraction from web pages
 - CSS selector-based content extraction
+- Google search results (SERP) as parsed JSON
 - Multiple proxy types (datacenter, residential, stealth) with country selection
 - JavaScript rendering using headless Chrome/Chromium
 - Concurrent request management with rate limiting
@@ -127,7 +128,7 @@ Add this to your `claude_desktop_config.json`:
 **Content Sandboxing** - Protect against indirect prompt injection attacks by wrapping scraped content with clear security boundaries.
 
 - `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING`: Enable/disable content sandboxing (default: `false`)
-  - `true`: Wraps all scraped content with security boundaries
+  - `true`: Wraps all scraped content (and search results) with security boundaries
   - `false`: No sandboxing
 
 When enabled, content is wrapped like this:
@@ -359,7 +360,56 @@ Example response:
 }
 ```
 
-### 7. Account Tool (`webscraping_ai_account`)
+### 7. SERP Tool (`webscraping_ai_serp`)
+
+Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Costs 15 credits per search; failed searches are not charged. The scraping options below don't apply.
+
+Parameters: `q` (required, search query), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer ≥ 1, `1` by default).
+
+```json
+{
+  "name": "webscraping_ai_serp",
+  "arguments": {
+    "q": "coffee machines",
+    "gl": "us",
+    "hl": "en",
+    "page": 1
+  }
+}
+```
+
+Example response:
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": {
+        "search_parameters": { "engine": "google", "q": "coffee machines", "gl": "us", "hl": "en", "page": 1 },
+        "search_information": { "query_displayed": "coffee machines", "organic_results_state": "Results for exact spelling" },
+        "organic_results": [
+          {
+            "position": 1,
+            "title": "The Best Coffee Makers",
+            "link": "https://www.example.com/best-coffee-makers",
+            "domain": "www.example.com",
+            "displayed_link": "https://www.example.com › best-coffee-makers",
+            "snippet": "We tested dozens of drip coffee makers..."
+          }
+        ],
+        "related_searches": [{ "query": "best coffee machines" }],
+        "pagination": { "current": 1, "next": "https://www.google.com/search?q=coffee+machines&start=10" }
+      }
+    }
+  ],
+  "isError": false
+}
+```
+
+With content sandboxing enabled, the banner's `Source:` line is the equivalent Google search URL (`https://www.google.com/search?q=coffee%20machines`).
+
+### 8. Account Tool (`webscraping_ai_account`)
 
 Get information about your WebScraping.AI account.
 
@@ -391,7 +441,7 @@ Example response:
 
 ## Common Options for All Tools
 
-The following options can be used with all scraping tools:
+The following options can be used with all scraping tools (not with `webscraping_ai_serp` or `webscraping_ai_account`, which don't scrape a page):
 
 - `timeout`: Maximum web page retrieval time in ms (15000 by default, maximum is 30000)
 - `js`: Execute on-page JavaScript using a headless browser (true by default)

@@ -8,7 +8,7 @@ import {
 } from '@jest/globals';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ContentSanitizer } from './index.js';
+import { ContentSanitizer, googleSearchUrl } from './index.js';
 
 // Create mock WebScrapingAIClient
 class MockWebScrapingAIClient {
@@ -19,6 +19,7 @@ class MockWebScrapingAIClient {
     this.text = jest.fn().mockResolvedValue('Test text content');
     this.selected = jest.fn().mockResolvedValue('<div>Selected Element</div>');
     this.selectedMultiple = jest.fn().mockResolvedValue(['<div>Element 1</div>', '<div>Element 2</div>']);
+    this.serp = jest.fn().mockResolvedValue({ organic_results: [{ position: 1, title: 'Result', link: 'https://example.com' }] });
     this.account = jest.fn().mockResolvedValue({ requests: 100, remaining: 900, limit: 1000 });
   }
 }
@@ -150,6 +151,28 @@ describe('WebScraping.AI MCP Server Tests', () => {
       isError: false
     });
     expect(mockClient.selectedMultiple).toHaveBeenCalledWith(url, selectors, {});
+  });
+
+  // Test serp functionality
+  test('should handle serp request', async () => {
+    const response = await requestHandler(
+      new RequestContext('webscraping_ai_serp', { q: 'coffee machines', gl: 'de', page: 2 })
+    );
+
+    expect(response).toEqual({
+      content: [{ type: 'text', text: JSON.stringify({ organic_results: [{ position: 1, title: 'Result', link: 'https://example.com' }] }, null, 2) }],
+      isError: false
+    });
+    expect(mockClient.serp).toHaveBeenCalledWith('coffee machines', { gl: 'de', page: 2 });
+  });
+
+  test('should require q for serp', async () => {
+    const response = await requestHandler(
+      new RequestContext('webscraping_ai_serp', { q: '' })
+    );
+
+    expect(response.isError).toBe(true);
+    expect(mockClient.serp).not.toHaveBeenCalled();
   });
 
   // Test account functionality
@@ -323,6 +346,19 @@ async function handleRequest(name, args, client) {
         };
       }
 
+      case 'webscraping_ai_serp': {
+        const { q, ...rest } = options;
+        if (!q) {
+          throw new Error('q is required');
+        }
+
+        const result = await client.serp(q, rest);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+          isError: false
+        };
+      }
+
       case 'webscraping_ai_account': {
         const result = await client.account();
         return {
@@ -456,3 +492,18 @@ describe('ContentSanitizer', () => {
   });
 });
 
+// Must match the remote server's ERB::Util.url_encode byte for byte (sandbox banner parity)
+describe('googleSearchUrl', () => {
+  test('encodes spaces as %20', () => {
+    expect(googleSearchUrl('coffee machines')).toBe('https://www.google.com/search?q=coffee%20machines');
+  });
+
+  test("escapes reserved characters including !'()*", () => {
+    expect(googleSearchUrl("a&b=c/d?e#f+g!*'()~-_."))
+      .toBe('https://www.google.com/search?q=a%26b%3Dc%2Fd%3Fe%23f%2Bg%21%2A%27%28%29~-_.');
+  });
+
+  test('percent-encodes non-ASCII as UTF-8', () => {
+    expect(googleSearchUrl('café')).toBe('https://www.google.com/search?q=caf%C3%A9');
+  });
+});

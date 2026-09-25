@@ -226,11 +226,7 @@ Example response:
   "content": [
     {
       "type": "text",
-      "text": {
-        "title": "Example Product",
-        "price": "$99.99",
-        "description": "This is an example product description."
-      }
+      "text": "{\n  \"result\": {\n    \"title\": \"Example Product\",\n    \"price\": \"$99.99\",\n    \"description\": \"This is an example product description.\"\n  }\n}"
     }
   ],
   "isError": false
@@ -385,25 +381,47 @@ Example response:
   "content": [
     {
       "type": "text",
-      "text": {
-        "search_parameters": { "engine": "google", "q": "coffee machines", "gl": "us", "hl": "en", "page": 1 },
-        "search_information": { "query_displayed": "coffee machines", "organic_results_state": "Results for exact spelling" },
-        "organic_results": [
-          {
-            "position": 1,
-            "title": "The Best Coffee Makers",
-            "link": "https://www.example.com/best-coffee-makers",
-            "domain": "www.example.com",
-            "displayed_link": "https://www.example.com › best-coffee-makers",
-            "snippet": "We tested dozens of drip coffee makers..."
-          }
-        ],
-        "related_searches": [{ "query": "best coffee machines" }],
-        "pagination": { "current": 1, "next": "https://www.google.com/search?q=coffee+machines&start=10" }
-      }
+      "text": "{\n  \"search_parameters\": {\n    \"engine\": \"google\", ...\n}"
     }
   ],
   "isError": false
+}
+```
+
+`text` is a pretty-printed JSON string; decoded, it looks like this (`position` restarts at 1 on every page, `domain` has no `www.`, `pagination.next` is a page number and is absent on the last page; `snippet`, `date`, `related_searches`, `showing_results_for` and `total_results` appear only when Google shows them):
+
+```json
+{
+  "search_parameters": {
+    "engine": "google",
+    "q": "coffee machines",
+    "gl": "us",
+    "hl": "en",
+    "page": 1
+  },
+  "search_information": {
+    "query_displayed": "coffee machines",
+    "organic_results_state": "Results for exact spelling"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "The Best Coffee Makers",
+      "link": "https://www.example.com/best-coffee-makers",
+      "domain": "example.com",
+      "displayed_link": "www.example.com › best-coffee-makers",
+      "snippet": "We tested dozens of drip coffee makers..."
+    }
+  ],
+  "related_searches": [
+    {
+      "query": "best coffee machines"
+    }
+  ],
+  "pagination": {
+    "current": 1,
+    "next": 2
+  }
 }
 ```
 
@@ -427,12 +445,7 @@ Example response:
   "content": [
     {
       "type": "text",
-      "text": {
-        "requests": 5000,
-        "remaining": 4500,
-        "limit": 10000,
-        "resets_at": "2023-12-31T23:59:59Z"
-      }
+      "text": "{\n  \"email\": \"you@example.com\",\n  \"remaining_api_calls\": 200000,\n  \"remaining_monthly_credits\": 200000,\n  \"remaining_payg_credits\": 0,\n  \"remaining_total_credits\": 200000,\n  \"resets_at\": 1790812800,\n  \"remaining_concurrency\": 100\n}"
     }
   ],
   "isError": false

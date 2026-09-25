@@ -11,6 +11,11 @@ All notable changes to `webscraping-ai-mcp` are documented in this file.
 ### Fixed
 
 - `webscraping_ai_selected_multiple` always returned `[[]]`: axios sent `selectors[]=h1&selectors[]=p`, which the API silently ignores. Arrays are now sent as repeated keys (`selectors=h1&selectors=p`).
+- `webscraping_ai_serp` rejects a whitespace-only `q` with an error result `{"message":"q must be a non-empty search query"}` (same message as the remote server) before calling the API; the schema stays `minLength: 1` and `q` is sent untrimmed.
+- `webscraping_ai_serp` no longer throws outside the error shape when `q` contains a lone surrogate ("URI malformed" while building the sandbox source URL); it now returns an `isError` result.
+- `bin/smoke.js`: the serp case fails unless `organic_results` is non-empty and `search_parameters.q` equals the query; FAIL lines redact the API key.
+- README: success response examples no longer show `"isError": false` (the server omits `isError` on success).
+- Tests: new `src/stdio.test.js` spawns the real server over stdio against a local HTTP stub and asserts the exact `/serp` query string, `q` validation, and `selectors=h1&selectors=p` for `selected_multiple`. `ContentSanitizer`/`googleSearchUrl` moved to side-effect-free `src/lib.js` (still re-exported from `src/index.js`) so unit tests no longer start a server.
 
 ## 1.0.7 — 2026-07-23
 

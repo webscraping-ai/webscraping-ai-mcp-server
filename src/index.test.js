@@ -8,7 +8,7 @@ import {
 } from '@jest/globals';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ContentSanitizer, googleSearchUrl } from './index.js';
+import { ContentSanitizer, googleSearchUrl } from './lib.js';
 
 // Create mock WebScrapingAIClient
 class MockWebScrapingAIClient {

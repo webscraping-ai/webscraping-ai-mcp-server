@@ -194,8 +194,7 @@ Example response:
       "type": "text",
       "text": "The main topic of this page is examples and documentation for HTML and web standards."
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -228,8 +227,7 @@ Example response:
       "type": "text",
       "text": "{\n  \"result\": {\n    \"title\": \"Example Product\",\n    \"price\": \"$99.99\",\n    \"description\": \"This is an example product description.\"\n  }\n}"
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -258,8 +256,7 @@ Example response:
       "type": "text",
       "text": "<html>...[full HTML content]...</html>"
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -287,8 +284,7 @@ Example response:
       "type": "text",
       "text": "Example Domain\nThis domain is for use in illustrative examples in documents..."
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -317,8 +313,7 @@ Example response:
       "type": "text",
       "text": "<div class=\"main-content\">This is the main content of the page.</div>"
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -351,8 +346,7 @@ Example response:
         "<div class=\"footer\">Footer content</div>"
       ]
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -360,7 +354,7 @@ Example response:
 
 Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Costs 15 credits per search; failed searches are not charged. The scraping options below don't apply.
 
-Parameters: `q` (required, search query), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer ≥ 1, `1` by default).
+Parameters: `q` (required, non-blank search query; whitespace-only is rejected), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer ≥ 1, `1` by default; the API caps it at 100).
 
 ```json
 {
@@ -383,8 +377,7 @@ Example response:
       "type": "text",
       "text": "{\n  \"search_parameters\": {\n    \"engine\": \"google\", ...\n}"
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -447,8 +440,7 @@ Example response:
       "type": "text",
       "text": "{\n  \"email\": \"you@example.com\",\n  \"remaining_api_calls\": 200000,\n  \"remaining_monthly_credits\": 200000,\n  \"remaining_payg_credits\": 0,\n  \"remaining_total_credits\": 200000,\n  \"resets_at\": 1790812800,\n  \"remaining_concurrency\": 100\n}"
     }
-  ],
-  "isError": false
+  ]
 }
 ```
 
@@ -539,7 +531,7 @@ cd webscraping-ai-mcp-server
 # Install dependencies
 npm install
 
-# Run tests
+# Run tests (unit tests plus src/stdio.test.js, which spawns the server over stdio against a local HTTP stub)
 npm test
 
 # Add your .env file
@@ -551,7 +543,7 @@ npx @modelcontextprotocol/inspector node src/index.js
 
 ### Live smoke test
 
-`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 8 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines"), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
+`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 8 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines"), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, and selected_multiple must match at least one element. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
 
 ```bash
 WEBSCRAPING_AI_API_KEY=your-key npm run smoke

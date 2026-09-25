@@ -61,9 +61,11 @@ async function connect(sandboxing) {
 let failures = 0;
 const ok = (name, preview) =>
   console.log(`  ok   ${name.padEnd(24)}  ${String(preview).slice(0, 120).replace(/\n/g, ' ')}`);
+// Error bodies can echo the request URL; never print the key.
+const redact = (text) => String(text).split(apiKey).join('[REDACTED]').replace(/api_key=[^&\s"']*/g, 'api_key=[REDACTED]');
 const fail = (name, message) => {
   failures += 1;
-  console.log(`  FAIL ${name.padEnd(24)}  ${String(message).slice(0, 300).replace(/\n/g, ' ')}`);
+  console.log(`  FAIL ${name.padEnd(24)}  ${redact(message).slice(0, 300).replace(/\n/g, ' ')}`);
 };
 
 function textOf(result) {
@@ -93,6 +95,22 @@ async function callTool(client, label, name, args) {
   }
 }
 
+// A 200 with no organic results or an echoed query that differs from ours
+// (e.g. mangled encoding) is a wrong result, not a pass.
+function serpProblem(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return 'response is not JSON';
+  }
+  if (!Array.isArray(data?.organic_results) || data.organic_results.length === 0) return 'no organic_results';
+  if (data?.search_parameters?.q !== query) {
+    return `search_parameters.q is ${JSON.stringify(data?.search_parameters?.q)}, expected ${JSON.stringify(query)}`;
+  }
+  return null;
+}
+
 const cases = [
   ['question', { url: target, question: 'What is this page about? Answer in one sentence.', ...cheap }],
   ['fields', { url: target, fields: { title: 'Page title', description: 'Short description' }, ...cheap }],
@@ -108,7 +126,7 @@ async function connectOrExit(sandboxing) {
   try {
     return await connect(sandboxing);
   } catch (err) {
-    console.log(`  FAIL ${'connect'.padEnd(24)}  ${err?.message ?? String(err)}`);
+    console.log(`  FAIL ${'connect'.padEnd(24)}  ${redact(err?.message ?? String(err))}`);
     process.exit(1);
   }
 }
@@ -131,8 +149,18 @@ for (const [name, args] of cases) {
   const text = await callTool(client, name, `webscraping_ai_${name}`, args);
   if (text === null) continue;
   // The API answers mis-encoded selectors with an empty [[]] instead of an error.
-  if (name === 'selected_multiple' && JSON.parse(text).flat().length === 0) {
-    fail(name, `no matches (selectors not received?): ${text}`);
+  let problem = null;
+  try {
+    if (name === 'selected_multiple' && JSON.parse(text).flat().length === 0) {
+      problem = 'no matches (selectors not received?)';
+    } else if (name === 'serp') {
+      problem = serpProblem(text);
+    }
+  } catch (err) {
+    problem = `${err?.constructor?.name ?? 'Error'}: ${err?.message ?? String(err)}`;
+  }
+  if (problem) {
+    fail(name, `${problem}: ${text}`);
     continue;
   }
   ok(name, text);

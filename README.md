@@ -536,6 +536,16 @@ cp .env.example .env
 npx @modelcontextprotocol/inspector node src/index.js
 ```
 
+### Live smoke test
+
+`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 8 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines"), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
+
+```bash
+WEBSCRAPING_AI_API_KEY=your-key npm run smoke
+```
+
+It uses real credits: about 32 for the main pass (page tools run with `js: false` and the `datacenter` proxy; the serp call alone costs 15) plus about 16 for the sandbox pass. The key must be set in the environment. The script won't start without it and never reads `.env`. A key passed this way also overrides any key in `.env`, because the server's `dotenv.config()` doesn't replace variables that are already set. Other `WEBSCRAPING_AI_*` variables, such as `WEBSCRAPING_AI_API_URL`, are passed through to the server.
+
 ### Contributing
 
 1. Fork the repository

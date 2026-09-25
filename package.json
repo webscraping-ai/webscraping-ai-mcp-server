@@ -13,8 +13,9 @@
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node src/index.js",
-    "lint": "eslint src/**/*.js",
-    "lint:fix": "eslint src/**/*.js --fix",
+    "smoke": "node bin/smoke.js",
+    "lint": "eslint src/**/*.js bin/**/*.js",
+    "lint:fix": "eslint src/**/*.js bin/**/*.js --fix",
     "format": "prettier --write ."
   },
   "license": "MIT",

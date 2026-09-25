@@ -26,6 +26,7 @@ trial includes 2,000 credits, no credit card required. See the
 - Plain text extraction from web pages
 - CSS selector-based content extraction
 - Google search results (SERP) as parsed JSON
+- Structured JSON for pages on supported sites (e.g. YouTube, TikTok, X, LinkedIn, Instagram, Reddit) from their normal URL
 - Multiple proxy types (datacenter, residential, stealth) with country selection
 - JavaScript rendering using headless Chrome/Chromium
 - Concurrent request management with rate limiting
@@ -420,7 +421,65 @@ Example response:
 
 With content sandboxing enabled, the banner's `Source:` line is the equivalent Google search URL (`https://www.google.com/search?q=coffee%20machines`).
 
-### 8. Account Tool (`webscraping_ai_account`)
+### 8. Structured Data Tool (`webscraping_ai_data`)
+
+Get structured JSON for a public page on a supported site from its normal URL — for example a YouTube video, channel or playlist, a TikTok video or profile, an X post or profile, a LinkedIn company, job or profile, an Instagram post, reel or profile, or a Reddit post, subreddit or user. The site (`provider`) and page kind (`type`) are detected from the URL. Those sites are examples: more are added on the server over time, and they work in this tool without an update. The tool never checks the URL against a site list. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. For other sites, use `webscraping_ai_fields`. Costs 15 credits per request, including `parse_failed` and `not_found` results; failed fetches are not charged. The scraping options below don't apply.
+
+Parameters:
+
+- `url` (required, non-blank; sent as-is).
+- `country`: Two-letter country code of the proxy used to fetch the page, `us` by default.
+- `transcript` (boolean): YouTube videos only. Also fetch the video's transcript into `data.transcript`. It's null when no matching captions are available. If the transcript fetch itself fails, the whole request fails with a 500 and is not charged.
+- `transcript_language`: Caption language to pick, e.g. `en` or `de`. Without it, English is preferred, then the first available track. If the video has no captions in that language, `data.transcript` is null.
+- `params`: object of extra query parameters (string, number or boolean values) sent as-is, for site-specific parameters added after this release. Keys must match `[A-Za-z0-9_-]{1,64}` and must not be `url`, `api_key`, `key`, one of the parameters above, or a `from_*` marker; any of those is rejected with an error result and no request is made.
+- `disable_content_sandboxing` (boolean): with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true`, `true` returns the raw JSON without the security banner.
+
+```json
+{
+  "name": "webscraping_ai_data",
+  "arguments": {
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "transcript": true,
+    "transcript_language": "en"
+  }
+}
+```
+
+`text` is a pretty-printed JSON string; decoded, it looks like this (abridged). `parse_status` is `ok`, `parse_failed` or `not_found` (all three are billed), `data` can be `null`, and the snake_case fields in `data` depend on `provider` and `type` (fields the page doesn't expose are `null`):
+
+```json
+{
+  "request_parameters": {
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "provider": "youtube",
+    "type": "video"
+  },
+  "parse_status": "ok",
+  "data": {
+    "video_id": "dQw4w9WgXcQ",
+    "title": "Rick Astley - Never Gonna Give You Up (Official Video)",
+    "views": 1700000000,
+    "length_seconds": 213,
+    "channel": { "name": "Rick Astley", "handle": "@RickAstleyYT" },
+    "transcript": {
+      "language": "en",
+      "is_generated": false,
+      "text": "...",
+      "transcripts": [{ "text": "...", "start": 18.8, "duration": 3.2 }]
+    }
+  }
+}
+```
+
+An unsupported URL (here `https://example.com/`) returns an error result:
+
+```json
+{"message":"API Error","status_code":400,"status_message":"Bad Request","body":{"message":"Unsupported URL for /data. Supported sites: youtube, tiktok, twitter, linkedin, instagram, reddit. For other sites, use /ai/fields for AI-powered extraction."}}
+```
+
+With content sandboxing enabled, the banner's `Source:` line is the requested `url`.
+
+### 9. Account Tool (`webscraping_ai_account`)
 
 Get information about your WebScraping.AI account.
 
@@ -446,7 +505,7 @@ Example response:
 
 ## Common Options for All Tools
 
-The following options can be used with all scraping tools (not with `webscraping_ai_serp` or `webscraping_ai_account`, which don't scrape a page):
+The following options can be used with all scraping tools (not with `webscraping_ai_serp`, `webscraping_ai_data` or `webscraping_ai_account`, which take their own parameters):
 
 - `timeout`: Maximum web page retrieval time in ms (15000 by default, maximum is 30000)
 - `js`: Execute on-page JavaScript using a headless browser (true by default)
@@ -543,13 +602,13 @@ npx @modelcontextprotocol/inspector node src/index.js
 
 ### Live smoke test
 
-`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 8 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines"), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, and selected_multiple must match at least one element. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
+`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 9 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines"; data fetches `https://www.youtube.com/watch?v=dQw4w9WgXcQ`, then calls `https://example.com/` and expects the server's 400 with a message containing `Unsupported URL`), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, selected_multiple must match at least one element, and data must return `parse_status` `ok`, `request_parameters.provider` `youtube` and a non-empty `data.title`. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
 
 ```bash
 WEBSCRAPING_AI_API_KEY=your-key npm run smoke
 ```
 
-It uses real credits: about 32 for the main pass (page tools run with `js: false` and the `datacenter` proxy; the serp call alone costs 15) plus about 16 for the sandbox pass. The key must be set in the environment. The script won't start without it and never reads `.env`. A key passed this way also overrides any key in `.env`, because the server's `dotenv.config()` doesn't replace variables that are already set. Other `WEBSCRAPING_AI_*` variables, such as `WEBSCRAPING_AI_API_URL`, are passed through to the server.
+It uses real credits: about 47 for the main pass (page tools run with `js: false` and the `datacenter` proxy; the serp and YouTube data calls cost 15 each, the unsupported-URL data call is free) plus about 16 for the sandbox pass. The key must be set in the environment. The script won't start without it and never reads `.env`. A key passed this way also overrides any key in `.env`, because the server's `dotenv.config()` doesn't replace variables that are already set. Other `WEBSCRAPING_AI_*` variables, such as `WEBSCRAPING_AI_API_URL`, are passed through to the server.
 
 ### Contributing
 

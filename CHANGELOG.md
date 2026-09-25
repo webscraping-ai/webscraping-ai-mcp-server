@@ -2,6 +2,13 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## 1.2.0 — 2026-09-25
+### Added
+
+- `webscraping_ai_data` tool for the new `/data` endpoint: structured JSON (`request_parameters` with `provider`/`type`, `parse_status`, `data`) for a page on a supported site, from its normal URL. Params `url` (required, non-blank), `country`, `transcript`, `transcript_language`, `params` (extra string/number/boolean query params sent as-is, for future site-specific params; keys `url`/`api_key`/`key`, a named parameter, a `from_*` marker, or anything outside `[A-Za-z0-9_-]{1,64}` are rejected before any request, with the same messages as the remote server) and `disable_content_sandboxing`. The URL is never checked against a site list client-side: sites are added on the server. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. The scraping options (`js`, `proxy`, `timeout`...) don't apply and the scraping defaults aren't sent. 15 credits per request. With content sandboxing on, the pretty-printed JSON is sandboxed with `Source: <url>`.
+- API errors now redact the API key (and any `api_key=...`) from the error text, in case an upstream error body echoes the request URL.
+- `bin/smoke.js`: one `/data` call on a YouTube video (asserts `parse_status` `ok`, provider `youtube`, non-empty `data.title`) and one on `https://example.com/` that must come back as the server's 400 with a message containing `Unsupported URL`.
+
 ## 1.1.0 — 2026-09-25
 
 ### Added

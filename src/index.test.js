@@ -20,6 +20,7 @@ class MockWebScrapingAIClient {
     this.selected = jest.fn().mockResolvedValue('<div>Selected Element</div>');
     this.selectedMultiple = jest.fn().mockResolvedValue(['<div>Element 1</div>', '<div>Element 2</div>']);
     this.serp = jest.fn().mockResolvedValue({ organic_results: [{ position: 1, title: 'Result', link: 'https://example.com' }] });
+    this.data = jest.fn().mockResolvedValue({ request_parameters: { provider: 'youtube', type: 'video' }, parse_status: 'ok', data: { title: 'Video' } });
     this.account = jest.fn().mockResolvedValue({ requests: 100, remaining: 900, limit: 1000 });
   }
 }
@@ -173,6 +174,24 @@ describe('WebScraping.AI MCP Server Tests', () => {
 
     expect(response.isError).toBe(true);
     expect(mockClient.serp).not.toHaveBeenCalled();
+  });
+
+  test('should handle data request', async () => {
+    const response = await requestHandler(
+      new RequestContext('webscraping_ai_data', { url: 'https://example.com/anything', transcript: true })
+    );
+
+    expect(response.isError).toBe(false);
+    expect(mockClient.data).toHaveBeenCalledWith('https://example.com/anything', { transcript: true });
+  });
+
+  test('should require url for data', async () => {
+    const response = await requestHandler(
+      new RequestContext('webscraping_ai_data', { url: '' })
+    );
+
+    expect(response.isError).toBe(true);
+    expect(mockClient.data).not.toHaveBeenCalled();
   });
 
   // Test account functionality
@@ -353,6 +372,19 @@ async function handleRequest(name, args, client) {
         }
 
         const result = await client.serp(q, rest);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+          isError: false
+        };
+      }
+
+      case 'webscraping_ai_data': {
+        const { url, ...rest } = options;
+        if (!url) {
+          throw new Error('url is required');
+        }
+
+        const result = await client.data(url, rest);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
           isError: false

@@ -71,7 +71,12 @@ class WebScrapingAIClient {
         status_message: error.response?.statusText,
         body: error.response?.data
       };
-      throw new Error(JSON.stringify(errorResponse));
+      // The api_key rides in the query string; never let an error body or
+      // message that echoes the request URL carry it back to the model.
+      const text = JSON.stringify(errorResponse)
+        .split(this.apiKey).join('[REDACTED]')
+        .replace(/api_key=[^&\s"'\\]*/g, 'api_key=[REDACTED]');
+      throw new Error(text);
     }
   }
 
@@ -128,6 +133,14 @@ class WebScrapingAIClient {
     });
   }
 
+  // Only the tool's own params: /data ignores the scraping options.
+  async data(url, options = {}) {
+    return this.request('/data', {
+      url,
+      ...options
+    });
+  }
+
   async account() {
     return this.request('/account', {});
   }
@@ -162,10 +175,45 @@ function createSanitizedResponse(content, url, isError = false) {
   };
 }
 
+// Kept identical to the remote server's webscraping_ai_data tool (McpTools in the
+// Rails app). Sites are examples only: the list grows server-side.
+const DATA_TOOL_DESCRIPTION =
+  'Get structured JSON for a public page on a supported site from its normal URL, e.g. a YouTube video, channel ' +
+  'or playlist, a TikTok video or profile, an X post or profile, a LinkedIn company, job or profile, an Instagram ' +
+  'post, reel or profile, or a Reddit post, subreddit or user. Returns {request_parameters: {url, provider, type}, ' +
+  'parse_status, data}: provider (site) and type (page kind) are detected from the URL, parse_status is ok, ' +
+  'parse_failed or not_found, and data holds snake_case fields whose shape depends on provider and type (null ' +
+  "fields for values the page doesn't expose; data itself can be null when parsing fails). More sites are added " +
+  'on the server over time: an unsupported URL or page type returns a 400 error, not charged, whose message ' +
+  'lists what is supported. For other sites, use webscraping_ai_fields. Costs 15 credits per request, including ' +
+  'parse_failed and not_found results; failed fetches are not charged.';
+const DATA_BLANK_URL_MESSAGE = 'url must be a non-empty URL';
+const DATA_RESERVED_PARAMS_MESSAGE = 'params must not contain url or api_key';
+const DATA_RESERVED_PARAM_KEYS = new Set(['url', 'api_key', 'key']);
+const DATA_NAMED_PARAMS = new Set(['country', 'transcript', 'transcript_language', 'params', 'disable_content_sandboxing']);
+const DATA_PARAM_KEY_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+// Same checks, order and messages as the remote server. Returns an error
+// message, or null when every key is acceptable.
+function dataParamsProblem(extra) {
+  for (const key of Object.keys(extra)) {
+    if (DATA_RESERVED_PARAM_KEYS.has(key)) return DATA_RESERVED_PARAMS_MESSAGE;
+  }
+  for (const key of Object.keys(extra)) {
+    if (DATA_NAMED_PARAMS.has(key) || key.startsWith('from_')) {
+      return `params must not repeat a named parameter: ${key}`;
+    }
+  }
+  for (const key of Object.keys(extra)) {
+    if (!DATA_PARAM_KEY_PATTERN.test(key)) return `params key is not allowed: ${key}`;
+  }
+  return null;
+}
+
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.1.0'
+  version: '1.2.0'
 });
 
 // Common options schema for all tools
@@ -330,6 +378,64 @@ server.tool(
       return createSanitizedResponse(JSON.stringify(result, null, 2), source);
     } catch (error) {
       return createSanitizedResponse(error.message, source, true);
+    }
+  }
+);
+
+// No commonOptionsSchema: /data ignores the scraping options (js, proxy, timeout...).
+// The URL is never checked against a list of sites: supported sites grow on the
+// server, and its free 400 is the source of truth for "unsupported".
+server.tool(
+  'webscraping_ai_data',
+  DATA_TOOL_DESCRIPTION,
+  {
+    url: z.string().min(1).describe(
+      'Normal URL of a public page on a supported site, e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ. ' +
+        'Sent as-is; the site and page type are detected from it.'
+    ),
+    country: z.string().optional().describe(
+      'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de (us by default).'
+    ),
+    transcript: z.boolean().optional().describe(
+      "YouTube videos only. Also fetch the video's transcript into data.transcript (null when no matching captions " +
+        'are available; false by default). If the transcript fetch fails, the whole request fails with a 500 and is ' +
+        'not charged.'
+    ),
+    transcript_language: z.string().optional().describe(
+      'YouTube videos only, with transcript: true. Caption language to pick, e.g. en, de. Without it, English is ' +
+        'preferred, then the first available track; if the video has no captions in that language, data.transcript ' +
+        'is null.'
+    ),
+    params: z.record(z.union([z.string(), z.number(), z.boolean()])).optional().describe(
+      'Extra site-specific query parameters sent to the API as-is, as an object of string, number or boolean ' +
+        'values, for parameters added after this tool was released. Must not contain url, api_key or the ' +
+        'parameters above.'
+    ),
+    disable_content_sandboxing: z.boolean().optional().describe(
+      'Return the raw result without the external-content security boundaries that guard against prompt ' +
+        'injection (false by default).'
+    )
+  },
+  async ({ url, params, disable_content_sandboxing, ...options }) => {
+    // min(1) in the schema (kept identical to the remote server) still lets
+    // whitespace through; reject it here with the same message the remote server uses.
+    // url itself is sent untrimmed and otherwise unvalidated.
+    if (url.trim() === '') {
+      return createSanitizedResponse(JSON.stringify({ message: DATA_BLANK_URL_MESSAGE }), null, true);
+    }
+    const extra = params ?? {};
+    const problem = dataParamsProblem(extra);
+    if (problem) {
+      return createSanitizedResponse(JSON.stringify({ message: problem }), url, true);
+    }
+    try {
+      const result = await client.data(url, { ...extra, ...options });
+      const text = JSON.stringify(result, null, 2);
+      // Strict comparison: only a literal true drops the security boundaries.
+      if (disable_content_sandboxing === true) return { content: [{ type: 'text', text }] };
+      return createSanitizedResponse(text, url);
+    } catch (error) {
+      return createSanitizedResponse(error.message, url, true);
     }
   }
 );

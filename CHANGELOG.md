@@ -2,10 +2,11 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
-## Unreleased
+## 1.2.2 — 2026-09-26
 
 ### Changed
 
+- Every tool now declares a `title` and MCP annotations (`readOnlyHint: true`, `destructiveHint: false`, `openWorldHint` true except `webscraping_ai_account`), and every description links its API docs section. Tools that had no description (question, fields, html, text, selected, selected_multiple, account) now carry the same descriptions as the remote server. Registered via `registerTool` instead of the deprecated `server.tool`.
 - Docs: stop stating credit prices (they're set server-side and change); link to https://webscraping.ai/docs pricing instead.
 
 ## 1.2.1 — 2026-09-26

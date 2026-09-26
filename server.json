@@ -8,7 +8,7 @@
     "url": "https://github.com/webscraping-ai/webscraping-ai-mcp-server",
     "source": "github"
   },
-  "version": "1.2.1",
+  "version": "1.2.2",
   "icons": [
     {
       "src": "https://webscraping.ai/android-chrome-512x512.png",
@@ -20,7 +20,7 @@
     {
       "registryType": "npm",
       "identifier": "webscraping-ai-mcp",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "transport": {
         "type": "stdio"
       },

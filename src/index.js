@@ -213,8 +213,21 @@ function dataParamsProblem(extra) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.2.1'
+  version: '1.2.2'
 });
+
+// Tool metadata + annotations (MCP directory review criteria ask for them).
+// No tool changes data on our side or the target's (spent credits are billing,
+// not a destructive side effect); all but account reach the open web. Titles,
+// descriptions and annotations match the remote server (app/services/mcp_tools.rb).
+function toolConfig(title, description, inputSchema, openWorldHint = true) {
+  return {
+    title,
+    description,
+    inputSchema,
+    annotations: { title, readOnlyHint: true, destructiveHint: false, openWorldHint }
+  };
+}
 
 // Common options schema for all tools
 const commonOptionsSchema = {
@@ -232,13 +245,21 @@ const commonOptionsSchema = {
 };
 
 // Define and register tools
-server.tool(
+server.registerTool(
   'webscraping_ai_question',
-  {
-    url: z.string().describe('URL of the target page.'),
-    question: z.string().describe('Question or instructions to ask the LLM model about the target page.'),
-    ...commonOptionsSchema
-  },
+  toolConfig(
+    'Ask a Question About a Page',
+    "Scrape a web page and have an LLM answer a question about it, using only the page's own content. Returns the answer as plain text. " +
+      'If the page lacks the information or the question can\'t be answered from it, the tool returns an error result whose ' +
+      'body.error starts with "Invalid page or question", and the credits are refunded. Costs 5 credits on top of the scrape\'s normal cost. ' +
+      'Suited to a single fact or short answer; use webscraping_ai_fields for several named values at once, ' +
+      'or webscraping_ai_text to read or reason over the whole page yourself. API docs: https://webscraping.ai/docs#ai-question',
+    {
+      url: z.string().describe('URL of the target page.'),
+      question: z.string().describe('Question or instructions to ask the LLM model about the target page.'),
+      ...commonOptionsSchema
+    }
+  ),
   async ({ url, question, ...options }) => {
     try {
       const result = await client.question(url, question, options);
@@ -249,13 +270,20 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'webscraping_ai_fields',
-  {
-    url: z.string().describe('URL of the target page.'),
-    fields: z.record(z.string()).describe('Dictionary of field names with instructions for extraction.'),
-    ...commonOptionsSchema
-  },
+  toolConfig(
+    'Extract Fields from a Page',
+    "Scrape a web page and have an LLM extract named values from it, using only the page's own content. " +
+      'Returns JSON of the form {"result": {<field>: <value>}} with exactly the requested keys; each value is a string, ' +
+      "or null when the page doesn't contain it. Values are never nested objects or arrays, so request a list as a single " +
+      "delimited string. Costs 5 credits on top of the scrape's normal cost. API docs: https://webscraping.ai/docs#ai-fields",
+    {
+      url: z.string().describe('URL of the target page.'),
+      fields: z.record(z.string()).describe('Dictionary of field names with instructions for extraction.'),
+      ...commonOptionsSchema
+    }
+  ),
   async ({ url, fields, ...options }) => {
     try {
       const result = await client.fields(url, fields, options);
@@ -266,14 +294,18 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'webscraping_ai_html',
-  {
-    url: z.string().describe('URL of the target page.'),
-    return_script_result: z.boolean().optional().describe('Return result of the custom JavaScript code execution.'),
-    format: z.enum(['json', 'text']).optional().describe('Response format (json or text).'),
-    ...commonOptionsSchema
-  },
+  toolConfig(
+    'Get Page HTML',
+    'Get the full rendered HTML of a web page (with JavaScript execution by default). API docs: https://webscraping.ai/docs#html',
+    {
+      url: z.string().describe('URL of the target page.'),
+      return_script_result: z.boolean().optional().describe('Return result of the custom JavaScript code execution.'),
+      format: z.enum(['json', 'text']).optional().describe('Response format (json or text).'),
+      ...commonOptionsSchema
+    }
+  ),
   async ({ url, return_script_result, format, ...options }) => {
     try {
       const result = await client.html(url, { ...options, return_script_result });
@@ -286,14 +318,19 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'webscraping_ai_text',
-  {
-    url: z.string().describe('URL of the target page.'),
-    text_format: z.enum(['plain', 'xml', 'json']).optional().default('json').describe('Format of the text response.'),
-    return_links: z.boolean().optional().describe('Return links from the page body text.'),
-    ...commonOptionsSchema
-  },
+  toolConfig(
+    'Get Page Text',
+    "Get a web page's main content as Markdown, with boilerplate stripped and structure (headings, lists, tables, links) kept. " +
+      'Best for reading a page or passing it to an LLM. API docs: https://webscraping.ai/docs#text',
+    {
+      url: z.string().describe('URL of the target page.'),
+      text_format: z.enum(['plain', 'xml', 'json']).optional().default('json').describe('Format of the text response.'),
+      return_links: z.boolean().optional().describe('Return links from the page body text.'),
+      ...commonOptionsSchema
+    }
+  ),
   async ({ url, text_format, return_links, ...options }) => {
     try {
       const result = await client.text(url, {
@@ -312,14 +349,18 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'webscraping_ai_selected',
-  {
-    url: z.string().describe('URL of the target page.'),
-    selector: z.string().describe('CSS selector to extract content for.'),
-    format: z.enum(['json', 'text']).optional().default('json').describe('Response format (json or text).'),
-    ...commonOptionsSchema
-  },
+  toolConfig(
+    'Get Selected Element HTML',
+    'Get the HTML of the first page element matching a CSS selector. API docs: https://webscraping.ai/docs#selected',
+    {
+      url: z.string().describe('URL of the target page.'),
+      selector: z.string().describe('CSS selector to extract content for.'),
+      format: z.enum(['json', 'text']).optional().default('json').describe('Response format (json or text).'),
+      ...commonOptionsSchema
+    }
+  ),
   async ({ url, selector, format, ...options }) => {
     try {
       const result = await client.selected(url, selector, options);
@@ -332,13 +373,17 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'webscraping_ai_selected_multiple',
-  {
-    url: z.string().describe('URL of the target page.'),
-    selectors: z.array(z.string()).describe('Array of CSS selectors to extract content for.'),
-    ...commonOptionsSchema
-  },
+  toolConfig(
+    'Get Multiple Selected Elements HTML',
+    'Get the HTML of all page elements matching a list of CSS selectors. API docs: https://webscraping.ai/docs#selected',
+    {
+      url: z.string().describe('URL of the target page.'),
+      selectors: z.array(z.string()).describe('Array of CSS selectors to extract content for.'),
+      ...commonOptionsSchema
+    }
+  ),
   async ({ url, selectors, ...options }) => {
     try {
       const result = await client.selectedMultiple(url, selectors, options);
@@ -350,20 +395,23 @@ server.tool(
 );
 
 // No commonOptionsSchema: /serp ignores the scraping options (js, proxy, timeout...).
-server.tool(
+server.registerTool(
   'webscraping_ai_serp',
-  'Search Google and get parsed results as JSON: organic_results (position, title, link, domain, displayed_link, ' +
-    'snippet, date), related_searches, search_information (including spelling corrections) and pagination. ' +
-    '10 results per page; position restarts at 1 on every page. Priced per search (see ' +
-    'https://webscraping.ai/docs#serp); failed searches are not charged. Use it to find pages, then read them ' +
-    'with webscraping_ai_text or the other tools.',
-  {
-    q: z.string().min(1).describe('Search query.'),
-    engine: z.enum(['google']).optional().describe('Search engine to query (google by default).'),
-    gl: z.string().optional().describe('Two-letter country code for the search, e.g. us, gb, de (us by default).'),
-    hl: z.string().optional().describe('Two-letter language code for the results, e.g. en, de, fr (en by default).'),
-    page: z.number().int().min(1).optional().describe('Results page number, 10 results per page (1 by default).')
-  },
+  toolConfig(
+    'Search Google',
+    'Search Google and get parsed results as JSON: organic_results (position, title, link, domain, displayed_link, ' +
+      'snippet, date), related_searches, search_information (including spelling corrections) and pagination. ' +
+      '10 results per page; position restarts at 1 on every page. Priced per search (see ' +
+      'https://webscraping.ai/docs#serp); failed searches are not charged. Use it to find pages, then read them ' +
+      'with webscraping_ai_text or the other tools.',
+    {
+      q: z.string().min(1).describe('Search query.'),
+      engine: z.enum(['google']).optional().describe('Search engine to query (google by default).'),
+      gl: z.string().optional().describe('Two-letter country code for the search, e.g. us, gb, de (us by default).'),
+      hl: z.string().optional().describe('Two-letter language code for the results, e.g. en, de, fr (en by default).'),
+      page: z.number().int().min(1).optional().describe('Results page number, 10 results per page (1 by default).')
+    }
+  ),
   async ({ q, ...options }) => {
     // minLength: 1 in the schema (kept identical to the remote server) still lets
     // whitespace through; reject it here with the same message the remote server uses.
@@ -386,37 +434,40 @@ server.tool(
 // No commonOptionsSchema: /data ignores the scraping options (js, proxy, timeout...).
 // The URL is never checked against a list of sites: supported sites grow on the
 // server, and its free 400 is the source of truth for "unsupported".
-server.tool(
+server.registerTool(
   'webscraping_ai_data',
-  DATA_TOOL_DESCRIPTION,
-  {
-    url: z.string().min(1).describe(
-      'Normal URL of a public page on a supported site, e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ. ' +
-        'Sent as-is; the site and page type are detected from it.'
-    ),
-    country: z.string().optional().describe(
-      'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de (us by default).'
-    ),
-    transcript: z.boolean().optional().describe(
-      "YouTube videos only. Also fetch the video's transcript into data.transcript (null when no matching captions " +
-        'are available; false by default). If the transcript fetch fails, the whole request fails with a 500 and is ' +
-        'not charged.'
-    ),
-    transcript_language: z.string().optional().describe(
-      'YouTube videos only, with transcript: true. Caption language to pick, e.g. en, de. Without it, English is ' +
-        'preferred, then the first available track; if the video has no captions in that language, data.transcript ' +
-        'is null.'
-    ),
-    params: z.record(z.union([z.string(), z.number(), z.boolean()])).optional().describe(
-      'Extra site-specific query parameters sent to the API as-is, as an object of string, number or boolean ' +
-        'values, for parameters added after this tool was released. Must not contain url, api_key or the ' +
-        'parameters above.'
-    ),
-    disable_content_sandboxing: z.boolean().optional().describe(
-      'Return the raw result without the external-content security boundaries that guard against prompt ' +
-        'injection (false by default).'
-    )
-  },
+  toolConfig(
+    'Get Structured Site Data',
+    DATA_TOOL_DESCRIPTION,
+    {
+      url: z.string().min(1).describe(
+        'Normal URL of a public page on a supported site, e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ. ' +
+          'Sent as-is; the site and page type are detected from it.'
+      ),
+      country: z.string().optional().describe(
+        'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de (us by default).'
+      ),
+      transcript: z.boolean().optional().describe(
+        "YouTube videos only. Also fetch the video's transcript into data.transcript (null when no matching captions " +
+          'are available; false by default). If the transcript fetch fails, the whole request fails with a 500 and is ' +
+          'not charged.'
+      ),
+      transcript_language: z.string().optional().describe(
+        'YouTube videos only, with transcript: true. Caption language to pick, e.g. en, de. Without it, English is ' +
+          'preferred, then the first available track; if the video has no captions in that language, data.transcript ' +
+          'is null.'
+      ),
+      params: z.record(z.union([z.string(), z.number(), z.boolean()])).optional().describe(
+        'Extra site-specific query parameters sent to the API as-is, as an object of string, number or boolean ' +
+          'values, for parameters added after this tool was released. Must not contain url, api_key or the ' +
+          'parameters above.'
+      ),
+      disable_content_sandboxing: z.boolean().optional().describe(
+        'Return the raw result without the external-content security boundaries that guard against prompt ' +
+          'injection (false by default).'
+      )
+    }
+  ),
   async ({ url, params, disable_content_sandboxing, ...options }) => {
     // min(1) in the schema (kept identical to the remote server) still lets
     // whitespace through; reject it here with the same message the remote server uses.
@@ -441,9 +492,14 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'webscraping_ai_account',
-  {},
+  toolConfig(
+    'Get Account Status',
+    'Get your WebScraping.AI account status: email, remaining API credits, and concurrency. API docs: https://webscraping.ai/docs#account',
+    {},
+    false
+  ),
   async () => {
     try {
       const result = await client.account();

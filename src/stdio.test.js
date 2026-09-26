@@ -141,6 +141,20 @@ describe('stdio server against a local API stub', () => {
     expect(data.description).toMatch(/webscraping_ai_fields/);
   });
 
+  test('every tool has a title, read-only annotations and an API docs link', async () => {
+    const { tools } = await client.listTools();
+    for (const tool of tools) {
+      expect(tool.title).toBeTruthy();
+      expect(tool.annotations).toMatchObject({
+        title: tool.title,
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: tool.name !== 'webscraping_ai_account',
+      });
+      expect(tool.description).toMatch('https://webscraping.ai/docs#');
+    }
+  });
+
   const callData = async (args) => {
     const before = requests.length;
     const result = await client.callTool({

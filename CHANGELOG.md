@@ -2,6 +2,13 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## 1.2.1 — 2026-09-26
+
+### Security
+
+- Dependency updates for open Dependabot alerts: `@modelcontextprotocol/sdk` 1.7 → 1.30.1 (ReDoS, DNS-rebinding default, request body size limits; pulls patched `express`/`body-parser`/`qs`/`path-to-regexp`) and `axios` 1.8 → 1.20 (prototype-pollution gadgets, proxy/redirect credential leaks, DoS; pulls patched `form-data`/`follow-redirects`). Dev dependencies refreshed (`js-yaml`, `brace-expansion`, `@babel/core`, `browserslist`, …). No tool or behavior changes.
+- `zod` is now a declared dependency (`^3.25.76`). It was imported but only available as the SDK's transitive dependency; SDK 1.30 accepts zod 3 or 4 as a peer, and zod 4 would break the existing schemas.
+
 ## 1.2.0 — 2026-09-25
 ### Added
 

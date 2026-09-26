@@ -1,6 +1,6 @@
 {
   "name": "webscraping-ai-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "mcpName": "io.github.webscraping-ai/webscraping-ai",
   "description": "Model Context Protocol server for WebScraping.AI API. Provides LLM-powered web scraping tools with Chromium JavaScript rendering, rotating proxies, and HTML parsing.",
   "type": "module",
@@ -20,10 +20,14 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.4.1",
-    "axios": "^1.6.7",
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "axios": "^1.20.0",
     "dotenv": "^16.4.7",
-    "p-queue": "^8.0.1"
+    "p-queue": "^8.0.1",
+    "zod": "^3.25.76"
+  },
+  "overrides": {
+    "@hono/node-server": "^1.19.17"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

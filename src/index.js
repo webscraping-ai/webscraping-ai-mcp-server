@@ -213,7 +213,7 @@ function dataParamsProblem(extra) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.2.0'
+  version: '1.2.1'
 });
 
 // Common options schema for all tools

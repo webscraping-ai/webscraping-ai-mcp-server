@@ -185,8 +185,8 @@ const DATA_TOOL_DESCRIPTION =
   'parse_failed or not_found, and data holds snake_case fields whose shape depends on provider and type (null ' +
   "fields for values the page doesn't expose; data itself can be null when parsing fails). More sites are added " +
   'on the server over time: an unsupported URL or page type returns a 400 error, not charged, whose message ' +
-  'lists what is supported. For other sites, use webscraping_ai_fields. Costs 15 credits per request, including ' +
-  'parse_failed and not_found results; failed fetches are not charged.';
+  'lists what is supported. For other sites, use webscraping_ai_fields. Priced per site (see ' +
+  'https://webscraping.ai/docs#data), including parse_failed and not_found results; failed fetches are not charged.';
 const DATA_BLANK_URL_MESSAGE = 'url must be a non-empty URL';
 const DATA_RESERVED_PARAMS_MESSAGE = 'params must not contain url or api_key';
 const DATA_RESERVED_PARAM_KEYS = new Set(['url', 'api_key', 'key']);
@@ -354,8 +354,9 @@ server.tool(
   'webscraping_ai_serp',
   'Search Google and get parsed results as JSON: organic_results (position, title, link, domain, displayed_link, ' +
     'snippet, date), related_searches, search_information (including spelling corrections) and pagination. ' +
-    '10 results per page; position restarts at 1 on every page. Costs 15 credits per search; failed searches ' +
-    'are not charged. Use it to find pages, then read them with webscraping_ai_text or the other tools.',
+    '10 results per page; position restarts at 1 on every page. Priced per search (see ' +
+    'https://webscraping.ai/docs#serp); failed searches are not charged. Use it to find pages, then read them ' +
+    'with webscraping_ai_text or the other tools.',
   {
     q: z.string().min(1).describe('Search query.'),
     engine: z.enum(['google']).optional().describe('Search engine to query (google by default).'),

@@ -137,7 +137,7 @@ describe('stdio server against a local API stub', () => {
     expect(props.params.additionalProperties).toEqual({
       type: ['string', 'number', 'boolean'],
     });
-    expect(data.description).toMatch(/15 credits/);
+    expect(data.description).toMatch('https://webscraping.ai/docs#data');
     expect(data.description).toMatch(/webscraping_ai_fields/);
   });
 

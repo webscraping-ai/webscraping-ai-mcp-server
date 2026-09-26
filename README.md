@@ -14,8 +14,8 @@ A Model Context Protocol (MCP) server implementation that integrates with
 Chromium JavaScript rendering, rotating datacenter/residential/stealth proxies,
 and AI-powered question answering and structured field extraction on any page.
 
-[Sign up](https://webscraping.ai/auth/sign_up) to get an API key — the free
-trial includes 2,000 credits, no credit card required. See the
+[Sign up](https://webscraping.ai/auth/sign_up) to get an API key — a free
+trial, no credit card required. See the
 [API documentation](https://webscraping.ai/docs) for the full parameter reference.
 
 ## Features
@@ -353,7 +353,7 @@ Example response:
 
 ### 7. SERP Tool (`webscraping_ai_serp`)
 
-Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Costs 15 credits per search; failed searches are not charged. The scraping options below don't apply.
+Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Priced per search (see [pricing](https://webscraping.ai/docs#serp)); failed searches are not charged. The scraping options below don't apply.
 
 Parameters: `q` (required, non-blank search query; whitespace-only is rejected), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer 1–100, `1` by default; the API rejects values above 100 with a 400).
 
@@ -423,7 +423,7 @@ With content sandboxing enabled, the banner's `Source:` line is the equivalent G
 
 ### 8. Structured Data Tool (`webscraping_ai_data`)
 
-Get structured JSON for a public page on a supported site from its normal URL — for example a YouTube video, channel or playlist, a TikTok video or profile, an X post or profile, a LinkedIn company, job or profile, an Instagram post, reel or profile, or a Reddit post, subreddit or user. The site (`provider`) and page kind (`type`) are detected from the URL. Those sites are examples: more are added on the server over time, and they work in this tool without an update. The tool never checks the URL against a site list. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. For other sites, use `webscraping_ai_fields`. Costs 15 credits per request, including `parse_failed` and `not_found` results; failed fetches are not charged. The scraping options below don't apply.
+Get structured JSON for a public page on a supported site from its normal URL — for example a YouTube video, channel or playlist, a TikTok video or profile, an X post or profile, a LinkedIn company, job or profile, an Instagram post, reel or profile, or a Reddit post, subreddit or user. The site (`provider`) and page kind (`type`) are detected from the URL. Those sites are examples: more are added on the server over time, and they work in this tool without an update. The tool never checks the URL against a site list. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. For other sites, use `webscraping_ai_fields`. Priced per site (see [pricing](https://webscraping.ai/docs#data)), including `parse_failed` and `not_found` results; failed fetches are not charged. The scraping options below don't apply.
 
 Parameters:
 

@@ -2,6 +2,12 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Docs: stop stating credit prices (they're set server-side and change); link to https://webscraping.ai/docs pricing instead.
+
 ## 1.2.1 — 2026-09-26
 
 ### Security

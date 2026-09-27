@@ -56,5 +56,11 @@
         }
       ]
     }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.webscraping.ai/mcp"
+    }
   ]
 }

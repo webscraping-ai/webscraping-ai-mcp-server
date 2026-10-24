@@ -2,6 +2,16 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## 1.3.1 — 2026-10-24
+
+### Security
+
+- Require `@modelcontextprotocol/sdk` ^1.32.2 (was ^1.30.1) and `zod` ^4.6.7 (was ^3.25.76): every zod 3.x release is affected by the unbounded-array memory exhaustion advisory, fixed only in 4.6.6. The lockfile also picks up patched `follow-redirects`, `fast-uri`, `body-parser`, `hono` and `ip-address`. The stdio server never loads the SDK's HTTP transport or OAuth code, so most of these were unreachable here.
+
+### Changed
+
+- Tool input schemas are now generated from zod 4: the top-level `additionalProperties: false` is gone, record params gain `propertyNames: {type: string}`, and integer params gain a safe-integer `maximum`. Unknown arguments are still stripped, as before.
+
 ## 1.3.0 — 2026-10-24
 
 ### Added

@@ -217,7 +217,7 @@ function dataParamsProblem(extra) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.3.0'
+  version: '1.3.1'
 });
 
 // Tool metadata + annotations (MCP directory review criteria ask for them).
@@ -284,7 +284,7 @@ server.registerTool(
       "delimited string. Costs 5 credits on top of the scrape's normal cost. API docs: https://webscraping.ai/docs#ai-fields",
     {
       url: z.string().describe('URL of the target page.'),
-      fields: z.record(z.string()).describe('Dictionary of field names with instructions for extraction.'),
+      fields: z.record(z.string(), z.string()).describe('Dictionary of field names with instructions for extraction.'),
       ...commonOptionsSchema
     }
   ),
@@ -529,7 +529,7 @@ server.registerTool(
           'preferred, then the first available track; if the video has no captions in that language, data.transcript ' +
           'is null.'
       ),
-      params: z.record(z.union([z.string(), z.number(), z.boolean()])).optional().describe(
+      params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe(
         'Extra site-specific query parameters sent to the API as-is, as an object of string, number or boolean ' +
           'values, for parameters added after this tool was released. Must not contain url, api_key or the ' +
           'parameters above.'

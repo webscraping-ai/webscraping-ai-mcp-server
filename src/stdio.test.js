@@ -21,6 +21,20 @@ const SERP_BODY = {
   ],
 };
 
+const LOCATIONS_BODY = [
+  {
+    id: '1026201',
+    google_id: 1026201,
+    google_parent_id: 21176,
+    name: 'Austin',
+    canonical_name: 'Austin,Texas,United States',
+    country_code: 'US',
+    target_type: 'City',
+    reach: 974447,
+    gps: [-97.7431, 30.2672],
+  },
+];
+
 const YT_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 const DATA_BODY = {
   request_parameters: { url: YT_URL, provider: 'youtube', type: 'video' },
@@ -50,6 +64,7 @@ describe('stdio server against a local API stub', () => {
       const path = new URL(req.url, 'http://stub').pathname;
       res.setHeader('Content-Type', 'application/json');
       if (path === '/serp') res.end(JSON.stringify(SERP_BODY));
+      else if (path === '/serp/locations') res.end(JSON.stringify(LOCATIONS_BODY));
       else if (path === '/data') {
         const target = new URL(req.url, 'http://stub').searchParams.get('url');
         if (target === YT_URL) res.end(JSON.stringify(DATA_BODY));
@@ -102,7 +117,7 @@ describe('stdio server against a local API stub', () => {
   const lastRequest = () =>
     new URL(requests[requests.length - 1], 'http://stub');
 
-  test('lists all 9 tools', async () => {
+  test('lists all 10 tools', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       'webscraping_ai_account',
@@ -113,10 +128,27 @@ describe('stdio server against a local API stub', () => {
       'webscraping_ai_selected',
       'webscraping_ai_selected_multiple',
       'webscraping_ai_serp',
+      'webscraping_ai_serp_locations',
       'webscraping_ai_text',
     ]);
     const serp = tools.find((t) => t.name === 'webscraping_ai_serp');
     expect(serp.inputSchema.properties.q.minLength).toBe(1);
+    // Same order as the remote server's McpTools.
+    expect(Object.keys(serp.inputSchema.properties)).toEqual([
+      'q', 'engine', 'gl', 'hl', 'page', 'pages', 'location', 'uule', 'lat', 'lon', 'radius',
+      'disable_content_sandboxing',
+    ]);
+    for (const key of ['page', 'pages', 'radius'])
+      expect(serp.inputSchema.properties[key]).toMatchObject({ type: 'integer', minimum: 1 });
+    expect(serp.inputSchema.properties.lat.type).toBe('number');
+    expect(serp.inputSchema.properties.lon.type).toBe('number');
+    expect(serp.inputSchema.required).toEqual(['q']);
+
+    const locations = tools.find((t) => t.name === 'webscraping_ai_serp_locations');
+    expect(locations.title).toBe('Look Up Search Locations');
+    expect(Object.keys(locations.inputSchema.properties)).toEqual(['q', 'limit']);
+    expect(locations.inputSchema.properties.limit).toMatchObject({ type: 'integer', minimum: 1 });
+    expect(locations.inputSchema.required ?? []).toEqual([]);
 
     const data = tools.find((t) => t.name === 'webscraping_ai_data');
     const props = data.inputSchema.properties;
@@ -149,7 +181,7 @@ describe('stdio server against a local API stub', () => {
         title: tool.title,
         readOnlyHint: true,
         destructiveHint: false,
-        openWorldHint: tool.name !== 'webscraping_ai_account',
+        openWorldHint: !['webscraping_ai_account', 'webscraping_ai_serp_locations'].includes(tool.name),
       });
       expect(tool.description).toMatch('https://webscraping.ai/docs#');
     }
@@ -390,6 +422,107 @@ describe('stdio server against a local API stub', () => {
     expect(result.content[0].text).toMatch(/URI malformed/);
   });
 
+  test('serp sends location, pages and radius as given, without scraping defaults', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_serp',
+      arguments: { q: 'coffee machines', location: 'Austin, TX', pages: 2, radius: 500 },
+    });
+
+    expect(result.isError).toBeUndefined();
+    const url = lastRequest();
+    expect(url.pathname).toBe('/serp');
+    expect([...url.searchParams.keys()].sort()).toEqual([
+      'api_key', 'from_mcp_server', 'location', 'pages', 'q', 'radius',
+    ]);
+    expect(url.searchParams.get('location')).toBe('Austin, TX');
+    expect(url.searchParams.get('pages')).toBe('2');
+    expect(url.searchParams.get('radius')).toBe('500');
+  });
+
+  // The server accepts only ^-?\d+(\.\d+)?$; String(1e-7) would send "1e-7".
+  test('serp sends lat/lon as plain decimals', async () => {
+    const cases = [
+      [30.2672, -97.7431, '30.2672', '-97.7431'],
+      [1e-7, -1e-9, '0.0000001', '0'],
+      [48, -0, '48', '0'],
+      [1.5e-7, 0.00390625, '0.0000001', '0.0039063'],
+      [30.00390625, -0.00390625, '30.0039063', '-0.0039063'],
+    ];
+    for (const [lat, lon, wireLat, wireLon] of cases) {
+      const result = await client.callTool({
+        name: 'webscraping_ai_serp',
+        arguments: { q: 'coffee', lat, lon },
+      });
+      expect(result.isError).toBeUndefined();
+      const url = lastRequest();
+      expect(url.searchParams.get('lat')).toBe(wireLat);
+      expect(url.searchParams.get('lon')).toBe(wireLon);
+      expect(url.search).toMatch(/[?&]lat=-?\d+(\.\d+)?(&|$)/);
+      expect(url.search).toMatch(/[?&]lon=-?\d+(\.\d+)?(&|$)/);
+    }
+  });
+
+  test('serp rejects a non-integer pages or radius via the schema without calling the API', async () => {
+    for (const args of [{ pages: 1.5 }, { pages: 0 }, { radius: 2.5 }]) {
+      const before = requests.length;
+      let outcome;
+      try {
+        outcome = await client.callTool({
+          name: 'webscraping_ai_serp',
+          arguments: { q: 'coffee', ...args },
+        });
+      } catch (err) {
+        outcome = err;
+      }
+      if (!(outcome instanceof Error)) expect(outcome.isError).toBe(true);
+      expect(requests.length).toBe(before);
+    }
+  });
+
+  test('serp_locations sends exactly q, limit, api_key and from_mcp_server', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_serp_locations',
+      arguments: { q: 'austin', limit: 3 },
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.content[0].text).toBe(JSON.stringify(LOCATIONS_BODY, null, 2));
+    const url = lastRequest();
+    expect(url.pathname).toBe('/serp/locations');
+    expect([...url.searchParams.keys()].sort()).toEqual([
+      'api_key', 'from_mcp_server', 'limit', 'q',
+    ]);
+    expect(url.searchParams.get('q')).toBe('austin');
+    expect(url.searchParams.get('limit')).toBe('3');
+  });
+
+  test('serp_locations without arguments sends no q or limit', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_serp_locations',
+      arguments: {},
+    });
+
+    expect(result.isError).toBeUndefined();
+    const url = lastRequest();
+    expect(url.pathname).toBe('/serp/locations');
+    expect([...url.searchParams.keys()].sort()).toEqual(['api_key', 'from_mcp_server']);
+  });
+
+  test('serp_locations rejects a non-integer limit via the schema without calling the API', async () => {
+    const before = requests.length;
+    let outcome;
+    try {
+      outcome = await client.callTool({
+        name: 'webscraping_ai_serp_locations',
+        arguments: { limit: 2.5 },
+      });
+    } catch (err) {
+      outcome = err;
+    }
+    if (!(outcome instanceof Error)) expect(outcome.isError).toBe(true);
+    expect(requests.length).toBe(before);
+  });
+
   test('selected_multiple sends selectors as repeated keys', async () => {
     const result = await client.callTool({
       name: 'webscraping_ai_selected_multiple',
@@ -412,7 +545,10 @@ describe('stdio server with content sandboxing on', () => {
   beforeAll(async () => {
     stub = http.createServer((req, res) => {
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(DATA_BODY));
+      const path = new URL(req.url, 'http://stub').pathname;
+      if (path === '/serp') res.end(JSON.stringify(SERP_BODY));
+      else if (path === '/serp/locations') res.end(JSON.stringify(LOCATIONS_BODY));
+      else res.end(JSON.stringify(DATA_BODY));
     });
     await new Promise((r) => stub.listen(0, '127.0.0.1', r));
     const transport = new StdioClientTransport({
@@ -457,5 +593,34 @@ describe('stdio server with content sandboxing on', () => {
     });
 
     expect(result.content[0].text).toBe(JSON.stringify(DATA_BODY, null, 2));
+  });
+
+  test('serp wraps the pretty-printed JSON in the banner citing the Google search URL', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_serp',
+      arguments: { q: 'coffee machines' },
+    });
+
+    const text = result.content[0].text;
+    expect(text).toContain('Source: https://www.google.com/search?q=coffee%20machines\n');
+    expect(text).toContain(JSON.stringify(SERP_BODY, null, 2));
+  });
+
+  test('serp with disable_content_sandboxing: true returns the raw JSON', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_serp',
+      arguments: { q: 'coffee machines', disable_content_sandboxing: true },
+    });
+
+    expect(result.content[0].text).toBe(JSON.stringify(SERP_BODY, null, 2));
+  });
+
+  test('serp_locations is never sandboxed (our own catalog data)', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_serp_locations',
+      arguments: { q: 'austin' },
+    });
+
+    expect(result.content[0].text).toBe(JSON.stringify(LOCATIONS_BODY, null, 2));
   });
 });

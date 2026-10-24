@@ -25,7 +25,7 @@ trial, no credit card required. See the
 - HTML content retrieval with JavaScript rendering
 - Plain text extraction from web pages
 - CSS selector-based content extraction
-- Google search results (SERP) as parsed JSON
+- Google search results (SERP) as parsed JSON, from a chosen location and up to 5 pages per call
 - Structured JSON for pages on supported sites (e.g. YouTube, TikTok, X, LinkedIn, Instagram, Reddit) from their normal URL
 - Multiple proxy types (datacenter, residential, stealth) with country selection
 - JavaScript rendering using headless Chrome/Chromium
@@ -353,18 +353,33 @@ Example response:
 
 ### 7. SERP Tool (`webscraping_ai_serp`)
 
-Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Priced per search (see [pricing](https://webscraping.ai/docs#serp)); failed searches are not charged. The scraping options below don't apply.
+Search Google and get parsed results as JSON: `organic_results` (`position`, `title`, `link`, `domain`, `displayed_link`, `snippet`, `date`), `related_searches`, `search_information` (including spelling corrections) and `pagination`. 10 results per page; `position` restarts at 1 on every page. Priced per results page returned (see [pricing](https://webscraping.ai/docs#serp)); failed searches are not charged. The scraping options below don't apply.
 
-Parameters: `q` (required, non-blank search query; whitespace-only is rejected), `engine` (`google`, the default), `gl` (two-letter country code, `us` by default), `hl` (two-letter language code, `en` by default), `page` (integer 1–100, `1` by default; the API rejects values above 100 with a 400).
+Every search runs from one fixed location: `location`, `lat` + `lon`, or `uule`, otherwise the capital of the `gl` country. So repeats and later pages are consistent. `gl` defaults to the location's country. `pages` (1–5) fetches consecutive pages in one call as one de-duplicated list, billed per page returned.
+
+Parameters:
+
+- `q` (required): non-blank search query; whitespace-only is rejected.
+- `engine`: `google`, the default.
+- `gl`: two-letter country code. Defaults to the country of `location`, `lat`/`lon` or `uule`, otherwise `us`.
+- `hl`: two-letter language code, `en` by default.
+- `page`: integer 1–100, `1` by default; the API rejects values above 100 with a 400.
+- `pages`: integer, number of consecutive pages to fetch starting at `page`, 1–5 (`1` by default). Duplicates across pages are removed, `position` counts through the combined list (1..N) and each result gets a `page` field.
+- `location`: where the search runs from: a canonical name (`Austin,Texas,United States`), a looser name (`Austin, TX`, or a local name of a large city such as `Москва`), or an `id` from `webscraping_ai_serp_locations`. Sent as-is. An unknown name returns a 400 that is not charged.
+- `uule`: Google-encoded location (`w+CAIQICI…` or `a+…`).
+- `lat`, `lon`: search origin in decimal degrees (sent as plain decimals with up to 7 fractional digits).
+- `radius`: integer, meters around `location` or `lat`/`lon`, 1–1000.
+- `disable_content_sandboxing` (boolean): with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true`, `true` returns the raw JSON without the security banner.
+
+`location`, `uule` and `lat`/`lon` are mutually exclusive, `lat` and `lon` go together, and `radius` needs `location` or `lat`/`lon`. The API checks these and the ranges, and its 400 is not charged.
 
 ```json
 {
   "name": "webscraping_ai_serp",
   "arguments": {
     "q": "coffee machines",
-    "gl": "us",
-    "hl": "en",
-    "page": 1
+    "location": "Austin, TX",
+    "pages": 2
   }
 }
 ```
@@ -382,7 +397,7 @@ Example response:
 }
 ```
 
-`text` is a pretty-printed JSON string; decoded, it looks like this (`position` restarts at 1 on every page, `domain` has no `www.`, `pagination.next` is a page number and is absent on the last page; `snippet`, `date`, `related_searches`, `showing_results_for` and `total_results` appear only when Google shows them):
+`text` is a pretty-printed JSON string; decoded, it looks like this (`position` restarts at 1 on every page, or counts through the combined list with `pages` above 1, `domain` has no `www.`, `pagination.next` is a page number and is absent on the last page; `snippet`, `date`, `related_searches`, `showing_results_for` and `total_results` appear only when Google shows them):
 
 ```json
 {
@@ -391,7 +406,12 @@ Example response:
     "q": "coffee machines",
     "gl": "us",
     "hl": "en",
-    "page": 1
+    "page": 1,
+    "pages": 2,
+    "location_requested": "Austin, TX",
+    "location_used": "Austin,Texas,United States",
+    "lat": 30.2672,
+    "lon": -97.7431
   },
   "search_information": {
     "query_displayed": "coffee machines",
@@ -404,7 +424,8 @@ Example response:
       "link": "https://www.example.com/best-coffee-makers",
       "domain": "example.com",
       "displayed_link": "www.example.com › best-coffee-makers",
-      "snippet": "We tested dozens of drip coffee makers..."
+      "snippet": "We tested dozens of drip coffee makers...",
+      "page": 1
     }
   ],
   "related_searches": [
@@ -414,14 +435,50 @@ Example response:
   ],
   "pagination": {
     "current": 1,
-    "next": 2
+    "next": 3,
+    "pages_returned": 2
   }
 }
 ```
 
+`search_parameters.pages`, `organic_results[].page` and `pagination.pages_returned` appear only when `pages` is above 1. `location_requested` is the `location` (or `uule`) you passed and `location_used` the canonical name the search ran from (omitted for coordinate searches). `lat` and `lon` are the coordinates the search was sent from, and `radius` appears when you sent one.
+
 With content sandboxing enabled, the banner's `Source:` line is the equivalent Google search URL (`https://www.google.com/search?q=coffee%20machines`).
 
-### 8. Structured Data Tool (`webscraping_ai_data`)
+### 8. SERP Locations Tool (`webscraping_ai_serp_locations`)
+
+Look up names for the `location` parameter of `webscraping_ai_serp`. Returns up to 10 matching locations as JSON, most populous first. Pass a result's `canonical_name` (or `id`) as `location`. Matches English names (`petersburg`); local-language names work in `webscraping_ai_serp`'s `location` but aren't searched here. Free. The result is our own location catalog, so it is never wrapped in the sandbox banner.
+
+Parameters: `q` (part of a location name; without it, the most populous locations are returned), `limit` (integer 1–10, `10` by default).
+
+```json
+{
+  "name": "webscraping_ai_serp_locations",
+  "arguments": {
+    "q": "austin"
+  }
+}
+```
+
+`text` is a pretty-printed JSON array; decoded, each entry looks like this (`gps` is `[longitude, latitude]`, `target_type` is a string such as `City`, `State` or `Country`, `google_parent_id` can be absent for countries):
+
+```json
+[
+  {
+    "id": "1026201",
+    "google_id": 1026201,
+    "google_parent_id": 21176,
+    "name": "Austin",
+    "canonical_name": "Austin,Texas,United States",
+    "country_code": "US",
+    "target_type": "City",
+    "reach": 974447,
+    "gps": [-97.7431, 30.2672]
+  }
+]
+```
+
+### 9. Structured Data Tool (`webscraping_ai_data`)
 
 Get structured JSON for a public page on a supported site from its normal URL — for example a YouTube video, channel or playlist, a TikTok video or profile, an X post or profile, a LinkedIn company, job or profile, an Instagram post, reel or profile, or a Reddit post, subreddit or user. The site (`provider`) and page kind (`type`) are detected from the URL. Those sites are examples: more are added on the server over time, and they work in this tool without an update. The tool never checks the URL against a site list. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. For other sites, use `webscraping_ai_fields`. Priced per site (see [pricing](https://webscraping.ai/docs#data)), including `parse_failed` and `not_found` results; failed fetches are not charged. The scraping options below don't apply.
 
@@ -479,7 +536,7 @@ An unsupported URL (here `https://example.com/`) returns an error result:
 
 With content sandboxing enabled, the banner's `Source:` line is the requested `url`.
 
-### 9. Account Tool (`webscraping_ai_account`)
+### 10. Account Tool (`webscraping_ai_account`)
 
 Get information about your WebScraping.AI account.
 
@@ -505,7 +562,7 @@ Example response:
 
 ## Common Options for All Tools
 
-The following options can be used with all scraping tools (not with `webscraping_ai_serp`, `webscraping_ai_data` or `webscraping_ai_account`, which take their own parameters):
+The following options can be used with all scraping tools (not with `webscraping_ai_serp`, `webscraping_ai_serp_locations`, `webscraping_ai_data` or `webscraping_ai_account`, which take their own parameters):
 
 - `timeout`: Maximum web page retrieval time in ms (15000 by default, maximum is 30000)
 - `js`: Execute on-page JavaScript using a headless browser (true by default)
@@ -602,13 +659,13 @@ npx @modelcontextprotocol/inspector node src/index.js
 
 ### Live smoke test
 
-`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 9 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines"; data fetches `https://www.youtube.com/watch?v=dQw4w9WgXcQ`, then calls `https://example.com/` and expects the server's 400 with a message containing `Unsupported URL`), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, selected_multiple must match at least one element, and data must return `parse_status` `ok`, `request_parameters.provider` `youtube` and a non-empty `data.title`. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
+`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 10 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines", then again with `location: "Austin, TX", pages: 2` and must report a `search_parameters.location_used` containing "Austin"; serp_locations looks up "austin" with `limit: 3` and the first `canonical_name` must contain "Austin"; data fetches `https://www.youtube.com/watch?v=dQw4w9WgXcQ`, then calls `https://example.com/` and expects the server's 400 with a message containing `Unsupported URL`), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, selected_multiple must match at least one element, and data must return `parse_status` `ok`, `request_parameters.provider` `youtube` and a non-empty `data.title`. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
 
 ```bash
 WEBSCRAPING_AI_API_KEY=your-key npm run smoke
 ```
 
-It uses real credits: about 47 for the main pass (page tools run with `js: false` and the `datacenter` proxy; the serp and YouTube data calls cost 15 each, the unsupported-URL data call is free) plus about 16 for the sandbox pass. The key must be set in the environment. The script won't start without it and never reads `.env`. A key passed this way also overrides any key in `.env`, because the server's `dotenv.config()` doesn't replace variables that are already set. Other `WEBSCRAPING_AI_*` variables, such as `WEBSCRAPING_AI_API_URL`, are passed through to the server.
+It uses real credits; see `bin/smoke.js`. Page tools run with `js: false` and the `datacenter` proxy. The key must be set in the environment. The script won't start without it and never reads `.env`. A key passed this way also overrides any key in `.env`, because the server's `dotenv.config()` doesn't replace variables that are already set. Other `WEBSCRAPING_AI_*` variables, such as `WEBSCRAPING_AI_API_URL`, are passed through to the server.
 
 ### Contributing
 

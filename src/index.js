@@ -6,7 +6,7 @@ import { z } from 'zod';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import PQueue from 'p-queue';
-import { ContentSanitizer, googleSearchUrl } from './lib.js';
+import { ContentSanitizer, googleSearchUrl, formatCoordinate } from './lib.js';
 
 dotenv.config();
 
@@ -133,6 +133,10 @@ class WebScrapingAIClient {
     });
   }
 
+  async serpLocations(options = {}) {
+    return this.request('/serp/locations', options);
+  }
+
   // Only the tool's own params: /data ignores the scraping options.
   async data(url, options = {}) {
     return this.request('/data', {
@@ -213,12 +217,12 @@ function dataParamsProblem(extra) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.2.2'
+  version: '1.3.0'
 });
 
 // Tool metadata + annotations (MCP directory review criteria ask for them).
 // No tool changes data on our side or the target's (spent credits are billing,
-// not a destructive side effect); all but account reach the open web. Titles,
+// not a destructive side effect); all but account and serp_locations reach the open web. Titles,
 // descriptions and annotations match the remote server (app/services/mcp_tools.rb).
 function toolConfig(title, description, inputSchema, openWorldHint = true) {
   return {
@@ -395,38 +399,106 @@ server.registerTool(
 );
 
 // No commonOptionsSchema: /serp ignores the scraping options (js, proxy, timeout...).
+// Location exclusivity and ranges (pages 1-5, radius 1-1000, lat/lon) are checked
+// by the server, whose 400 is not charged.
 server.registerTool(
   'webscraping_ai_serp',
   toolConfig(
     'Search Google',
     'Search Google and get parsed results as JSON: organic_results (position, title, link, domain, displayed_link, ' +
       'snippet, date), related_searches, search_information (including spelling corrections) and pagination. ' +
-      '10 results per page; position restarts at 1 on every page. Priced per search (see ' +
-      'https://webscraping.ai/docs#serp); failed searches are not charged. Use it to find pages, then read them ' +
-      'with webscraping_ai_text or the other tools.',
+      '10 results per page; position restarts at 1 on every page. Every search runs from one fixed location ' +
+      '(location, lat and lon, or uule; otherwise the capital of the gl country), so repeats and later pages stay ' +
+      'consistent. pages fetches up to 5 consecutive pages in one call as one de-duplicated list. Priced per ' +
+      'results page returned (see https://webscraping.ai/docs#serp); failed searches are not charged. Use it to ' +
+      'find pages, then read them with webscraping_ai_text or the other tools.',
     {
       q: z.string().min(1).describe('Search query.'),
       engine: z.enum(['google']).optional().describe('Search engine to query (google by default).'),
-      gl: z.string().optional().describe('Two-letter country code for the search, e.g. us, gb, de (us by default).'),
+      gl: z.string().optional().describe(
+        'Two-letter country code for the search, e.g. us, gb, de. Defaults to the country of location, lat/lon or ' +
+          'uule, otherwise us.'
+      ),
       hl: z.string().optional().describe('Two-letter language code for the results, e.g. en, de, fr (en by default).'),
-      page: z.number().int().min(1).optional().describe('Results page number, 10 results per page (1 by default).')
+      page: z.number().int().min(1).optional().describe('Results page number, 10 results per page (1 by default).'),
+      pages: z.number().int().min(1).optional().describe(
+        'Number of consecutive results pages to fetch in one call, starting at page, from 1 to 5 (1 by default). ' +
+          'Duplicates across pages are removed, position counts through the combined list and each result gets a ' +
+          'page field.'
+      ),
+      location: z.string().optional().describe(
+        'Where the search runs from: a location name such as Austin,Texas,United States or Austin, TX, or an id ' +
+          'from webscraping_ai_serp_locations. Large cities also match local names, e.g. Москва. An unknown name ' +
+          'returns an error and is not charged. Cannot be combined with uule, lat or lon.'
+      ),
+      uule: z.string().optional().describe(
+        'Google-encoded location (w+CAIQICI… or a+…). Cannot be combined with location, lat or lon.'
+      ),
+      lat: z.number().finite().optional().describe(
+        'Latitude of the search origin in decimal degrees, from -90 to 90. Requires lon; cannot be combined with ' +
+          'location or uule.'
+      ),
+      lon: z.number().finite().optional().describe(
+        'Longitude of the search origin in decimal degrees, from -180 to 180. Requires lat; cannot be combined ' +
+          'with location or uule.'
+      ),
+      radius: z.number().int().min(1).optional().describe('Radius in meters around location or lat/lon, from 1 to 1000.'),
+      disable_content_sandboxing: z.boolean().optional().describe(
+        'Return the raw result without the external-content security boundaries that guard against prompt ' +
+          'injection (false by default).'
+      )
     }
   ),
-  async ({ q, ...options }) => {
+  async ({ q, lat, lon, disable_content_sandboxing, ...options }) => {
     // minLength: 1 in the schema (kept identical to the remote server) still lets
     // whitespace through; reject it here with the same message the remote server uses.
     // q itself is sent untrimmed.
     if (q.trim() === '') {
       return createSanitizedResponse(JSON.stringify({ message: 'q must be a non-empty search query' }), null, true);
     }
+    if (lat !== undefined) options.lat = formatCoordinate(lat);
+    if (lon !== undefined) options.lon = formatCoordinate(lon);
     let source;
     try {
       // Inside the try: a lone surrogate makes encodeURIComponent throw "URI malformed".
       source = googleSearchUrl(q);
       const result = await client.serp(q, options);
-      return createSanitizedResponse(JSON.stringify(result, null, 2), source);
+      const text = JSON.stringify(result, null, 2);
+      // Strict comparison: only a literal true drops the security boundaries.
+      if (disable_content_sandboxing === true) return { content: [{ type: 'text', text }] };
+      return createSanitizedResponse(text, source);
     } catch (error) {
       return createSanitizedResponse(error.message, source, true);
+    }
+  }
+);
+
+// Our own location catalog, not third-party content: no sandbox banners, no
+// disable_content_sandboxing and closed-world, like the account tool. Free on the server.
+server.registerTool(
+  'webscraping_ai_serp_locations',
+  toolConfig(
+    'Look Up Search Locations',
+    'Look up names for the location parameter of webscraping_ai_serp. Returns up to 10 matching locations as ' +
+      'JSON, most populous first, each with id, name, canonical_name (pass it as location), country_code, ' +
+      'target_type (e.g. City, State, Country), reach (approximate population) and gps ([longitude, latitude]). ' +
+      'Matches English names, e.g. petersburg. Free. API docs: https://webscraping.ai/docs#serp-locations',
+    {
+      q: z.string().optional().describe(
+        'Part of a location name, e.g. austin. Without it, the most populous locations are returned.'
+      ),
+      limit: z.number().int().min(1).optional().describe(
+        'Maximum number of locations to return, from 1 to 10 (10 by default).'
+      )
+    },
+    false
+  ),
+  async (options) => {
+    try {
+      const result = await client.serpLocations(options);
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    } catch (error) {
+      return { content: [{ type: 'text', text: error.message }], isError: true };
     }
   }
 );

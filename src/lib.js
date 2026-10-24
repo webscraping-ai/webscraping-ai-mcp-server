@@ -66,3 +66,14 @@ export function googleSearchUrl(q) {
   const encoded = encodeURIComponent(q).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
   return `https://www.google.com/search?q=${encoded}`;
 }
+
+// /serp accepts lat/lon only as plain decimals (^-?\d+(\.\d+)?$). String(1e-7) is
+// "1e-7", so format explicitly: at most 7 fractional digits, trailing zeros and a
+// trailing "." trimmed (1e-7 -> "0.0000001", 48 -> "48", -0 -> "0"). Must match the
+// remote server's McpTools.format_coordinate.
+export function formatCoordinate(value) {
+  const fixed = value.toFixed(7);
+  if (!fixed.includes('.')) return fixed;
+  const trimmed = fixed.replace(/0+$/, '').replace(/\.$/, '');
+  return trimmed === '-0' ? '0' : trimmed;
+}

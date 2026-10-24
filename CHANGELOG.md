@@ -2,6 +2,16 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## 1.3.0 — 2026-10-24
+
+### Added
+
+- `webscraping_ai_serp` location and multi-page params: `pages` (integer ≥ 1; the API allows 1–5) fetches consecutive results pages in one call as one de-duplicated list, with `position` counting through it and a `page` field on each result; `location` (a canonical or looser location name, or an id from `webscraping_ai_serp_locations`, sent as-is), `uule`, `lat`, `lon` and `radius` (integer ≥ 1, meters). Every search runs from one fixed location (`location`, `lat`+`lon` or `uule`, otherwise the capital of the `gl` country), so repeats and later pages are consistent; `gl` now defaults to the location's country. Exclusivity and ranges are checked by the API, whose 400 is not charged. Billed per results page returned (see https://webscraping.ai/docs#serp).
+- `lat`/`lon` are sent as plain decimals with at most 7 fractional digits (`1e-7` → `0.0000001`, `48` → `48`): the API rejects exponent notation, which `String(1e-7)` would produce.
+- `webscraping_ai_serp` now takes `disable_content_sandboxing`, like `webscraping_ai_data` and the remote server's serp tool.
+- `webscraping_ai_serp_locations` tool for the new `GET /serp/locations`: look up location names (`q`, `limit` integer ≥ 1, up to 10) and get `id`, `name`, `canonical_name`, `country_code`, `target_type`, `reach` and `gps` (`[longitude, latitude]`) to pass as `location`. Free. Our own catalog data, so never sandboxed; no scraping defaults are sent.
+- `bin/smoke.js`: one serp call with `location: "Austin, TX", pages: 2` (asserts `search_parameters.location_used` contains "Austin" and non-empty `organic_results`) and one `serp_locations` call for "austin" (asserts the first `canonical_name` contains "Austin").
+
 ## 1.2.2 — 2026-09-26
 
 ### Changed

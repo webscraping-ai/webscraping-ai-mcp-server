@@ -8,7 +8,7 @@ import {
 } from '@jest/globals';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ContentSanitizer, googleSearchUrl } from './lib.js';
+import { ContentSanitizer, googleSearchUrl, formatCoordinate } from './lib.js';
 
 // Create mock WebScrapingAIClient
 class MockWebScrapingAIClient {
@@ -537,5 +537,32 @@ describe('googleSearchUrl', () => {
 
   test('percent-encodes non-ASCII as UTF-8', () => {
     expect(googleSearchUrl('café')).toBe('https://www.google.com/search?q=caf%C3%A9');
+  });
+});
+
+// /serp accepts lat/lon only as ^-?\d+(\.\d+)?$; must match the remote server's
+// McpTools.format_coordinate.
+describe('formatCoordinate', () => {
+  test.each([
+    [30.2672, '30.2672'],
+    [-97.7431, '-97.7431'],
+    [1e-7, '0.0000001'],
+    [-1e-7, '-0.0000001'],
+    [1e-9, '0'],
+    [1.5e-5, '0.000015'],
+    [48, '48'],
+    [-180, '-180'],
+    [0, '0'],
+    [-0, '0'],
+    [12.34567891, '12.3456789'],
+    // Half away from zero on the exact binary value; the remote server matches.
+    [1.5e-7, '0.0000001'],
+    [0.00390625, '0.0039063'],
+    [30.00390625, '30.0039063'],
+    [-0.00390625, '-0.0039063'],
+  ])('%p -> %p', (value, expected) => {
+    const wire = formatCoordinate(value);
+    expect(wire).toBe(expected);
+    expect(wire).toMatch(/^-?\d+(\.\d+)?$/);
   });
 });

@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: npm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         # No registry-url here on purpose: setup-node would otherwise write an
@@ -41,7 +41,7 @@ jobs:
         # as a failed auth attempt and returns 404 instead of falling back to
         # OIDC trusted publishing. `npm publish` uses the default registry +
         # OIDC auto-detect without it.
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'

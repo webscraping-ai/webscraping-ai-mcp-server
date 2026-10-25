@@ -2,6 +2,13 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## 1.3.2 — 2026-10-25
+
+### Changed
+
+- `webscraping_ai_question` and `webscraping_ai_fields` descriptions no longer state a credit amount for the LLM step ("billed on top of the scrape's normal cost"); prices live on https://webscraping.ai/docs. The hosted server at https://mcp.webscraping.ai/mcp uses the same text.
+- CHANGELOG: earlier entries no longer quote credit prices.
+
 ## 1.3.1 — 2026-10-24
 
 ### Security
@@ -39,7 +46,7 @@ All notable changes to `webscraping-ai-mcp` are documented in this file.
 ## 1.2.0 — 2026-09-25
 ### Added
 
-- `webscraping_ai_data` tool for the new `/data` endpoint: structured JSON (`request_parameters` with `provider`/`type`, `parse_status`, `data`) for a page on a supported site, from its normal URL. Params `url` (required, non-blank), `country`, `transcript`, `transcript_language`, `params` (extra string/number/boolean query params sent as-is, for future site-specific params; keys `url`/`api_key`/`key`, a named parameter, a `from_*` marker, or anything outside `[A-Za-z0-9_-]{1,64}` are rejected before any request, with the same messages as the remote server) and `disable_content_sandboxing`. The URL is never checked against a site list client-side: sites are added on the server. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. The scraping options (`js`, `proxy`, `timeout`...) don't apply and the scraping defaults aren't sent. 15 credits per request. With content sandboxing on, the pretty-printed JSON is sandboxed with `Source: <url>`.
+- `webscraping_ai_data` tool for the new `/data` endpoint: structured JSON (`request_parameters` with `provider`/`type`, `parse_status`, `data`) for a page on a supported site, from its normal URL. Params `url` (required, non-blank), `country`, `transcript`, `transcript_language`, `params` (extra string/number/boolean query params sent as-is, for future site-specific params; keys `url`/`api_key`/`key`, a named parameter, a `from_*` marker, or anything outside `[A-Za-z0-9_-]{1,64}` are rejected before any request, with the same messages as the remote server) and `disable_content_sandboxing`. The URL is never checked against a site list client-side: sites are added on the server. An unsupported URL or page type returns a 400 that is not charged. Its message lists what is supported. The scraping options (`js`, `proxy`, `timeout`...) don't apply and the scraping defaults aren't sent. Priced per site (see https://webscraping.ai/docs#data). With content sandboxing on, the pretty-printed JSON is sandboxed with `Source: <url>`.
 - API errors now redact the API key (and any `api_key=...`) from the error text, in case an upstream error body echoes the request URL.
 - `bin/smoke.js`: one `/data` call on a YouTube video (asserts `parse_status` `ok`, provider `youtube`, non-empty `data.title`) and one on `https://example.com/` that must come back as the server's 400 with a message containing `Unsupported URL`.
 
@@ -47,7 +54,7 @@ All notable changes to `webscraping-ai-mcp` are documented in this file.
 
 ### Added
 
-- `webscraping_ai_serp` tool for the new `/serp` endpoint: Google search results as parsed JSON (`organic_results`, `related_searches`, `search_information`, `pagination`). Params `q` (required), `engine`, `gl`, `hl`, `page`; the scraping options (`js`, `proxy`, `timeout`...) don't apply. 15 credits per search, failed searches not charged. With `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` the result is sandboxed like the other content tools, with `Source: https://www.google.com/search?q=<query>` (RFC 3986 encoding, matching the remote server byte for byte).
+- `webscraping_ai_serp` tool for the new `/serp` endpoint: Google search results as parsed JSON (`organic_results`, `related_searches`, `search_information`, `pagination`). Params `q` (required), `engine`, `gl`, `hl`, `page`; the scraping options (`js`, `proxy`, `timeout`...) don't apply. Priced per search (see https://webscraping.ai/docs#serp); failed searches are not charged. With `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` the result is sandboxed like the other content tools, with `Source: https://www.google.com/search?q=<query>` (RFC 3986 encoding, matching the remote server byte for byte).
 
 ### Fixed
 

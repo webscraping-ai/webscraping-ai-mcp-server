@@ -217,7 +217,7 @@ function dataParamsProblem(extra) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.3.1'
+  version: '1.3.2'
 });
 
 // Tool metadata + annotations (MCP directory review criteria ask for them).
@@ -255,7 +255,7 @@ server.registerTool(
     'Ask a Question About a Page',
     "Scrape a web page and have an LLM answer a question about it, using only the page's own content. Returns the answer as plain text. " +
       'If the page lacks the information or the question can\'t be answered from it, the tool returns an error result whose ' +
-      'body.error starts with "Invalid page or question", and the credits are refunded. Costs 5 credits on top of the scrape\'s normal cost. ' +
+      'body.error starts with "Invalid page or question", and the credits are refunded. The LLM step is billed on top of the scrape\'s normal cost. ' +
       'Suited to a single fact or short answer; use webscraping_ai_fields for several named values at once, ' +
       'or webscraping_ai_text to read or reason over the whole page yourself. API docs: https://webscraping.ai/docs#ai-question',
     {
@@ -281,7 +281,7 @@ server.registerTool(
     "Scrape a web page and have an LLM extract named values from it, using only the page's own content. " +
       'Returns JSON of the form {"result": {<field>: <value>}} with exactly the requested keys; each value is a string, ' +
       "or null when the page doesn't contain it. Values are never nested objects or arrays, so request a list as a single " +
-      "delimited string. Costs 5 credits on top of the scrape's normal cost. API docs: https://webscraping.ai/docs#ai-fields",
+      "delimited string. The LLM step is billed on top of the scrape's normal cost. API docs: https://webscraping.ai/docs#ai-fields",
     {
       url: z.string().describe('URL of the target page.'),
       fields: z.record(z.string(), z.string()).describe('Dictionary of field names with instructions for extraction.'),

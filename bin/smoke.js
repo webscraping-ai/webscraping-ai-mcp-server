@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * Hand-run smoke test that drives the real MCP server over stdio against the
- * live API. Not part of the test suite (jest only matches *.test.js) — costs
- * ~77 credits for the main sweep (page tools run with js=false and the
- * datacenter proxy; the SERP and YouTube /data calls are 15 each, the
- * location + pages: 2 SERP call bills two results pages, the example.com /data
- * call is a free 400 and serp_locations is free) plus ~16 for the sandbox pass
- * (one text call + one serp call).
+ * live API. Not part of the test suite (jest only matches *.test.js) — uses
+ * real credits (see https://webscraping.ai/docs for pricing) for the main
+ * sweep (page tools run with js=false and the datacenter proxy to keep the
+ * cost down; the location + pages: 2 SERP call bills two results pages,
+ * serp_locations is free, and the example.com /data call isn't charged when
+ * it answers 503, 422 or a 500 timeout) plus the sandbox pass (one text call + one serp call).
  *
  * Usage:
  *   WEBSCRAPING_AI_API_KEY=... npm run smoke
@@ -227,8 +227,11 @@ for (const [name, args] of cases) {
   ok(name, text);
 }
 
-// /data on an unsupported site: the client must send it (no client-side site
-// filter) and the server must answer with its free 400.
+// /data on a site without a dedicated parser: the client must send it (no
+// client-side site filter) and the server answers with data (learned inline),
+// a free 503 when learning outlasts the request, a free 422 when there is
+// no structured data, or a free 500 timeout when extracting the data or
+// loading the page runs out of time.
 try {
   const result = await client.callTool({ name: 'webscraping_ai_data', arguments: { url: target + '/' } });
   const text = textOf(result);
@@ -238,15 +241,18 @@ try {
   } catch {
     parsed = undefined;
   }
-  // The message proves the 400 came from the server's /data check.
-  const message = String(parsed?.body?.message ?? '');
-  if (result.isError && parsed?.status_code === 400 && message.includes('Unsupported URL')) {
-    ok('data:unsupported', text);
+  const errorCode = String(parsed?.body?.error_code ?? '');
+  const learned = !result.isError && parsed?.request_parameters;
+  const pending = result.isError && ((parsed?.status_code === 503 && errorCode === 'structure_processing') ||
+    (parsed?.status_code === 422 && errorCode === 'structure_unavailable') ||
+    (parsed?.status_code === 500 && errorCode === 'timeout'));
+  if (learned || pending) {
+    ok('data:any-site', text);
   } else {
-    fail('data:unsupported', `expected an isError 400 whose message contains "Unsupported URL": ${text}`);
+    fail('data:any-site', `expected data, a 503 structure_processing, a 422 structure_unavailable or a 500 timeout: ${text}`);
   }
 } catch (err) {
-  fail('data:unsupported', `${err?.constructor?.name ?? 'Error'}: ${err?.message ?? String(err)}`);
+  fail('data:any-site', `${err?.constructor?.name ?? 'Error'}: ${err?.message ?? String(err)}`);
 }
 await client.close();
 

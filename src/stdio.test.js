@@ -53,6 +53,12 @@ const DATA_PARSE_FAILED_BODY = {
 const UNSUPPORTED_MESSAGE =
   'Unsupported URL for /data. Supported sites: youtube, tiktok, x, linkedin, instagram, reddit. For other sites, use /ai/fields.';
 
+const DATA_PROCESSING_BODY = {
+  message: "We're processing the data structure of this site.",
+  error_code: 'structure_processing',
+  retry_after: 60,
+};
+
 describe('stdio server against a local API stub', () => {
   let stub;
   let client;
@@ -70,6 +76,10 @@ describe('stdio server against a local API stub', () => {
         if (target === YT_URL) res.end(JSON.stringify(DATA_BODY));
         else if (target === 'https://future.example/page')
           res.end(JSON.stringify(DATA_PARSE_FAILED_BODY));
+        else if (target === 'https://learning.example/p/1') {
+          res.statusCode = 503;
+          res.end(JSON.stringify(DATA_PROCESSING_BODY));
+        }
         else if (target === 'https://echo.example/') {
           // Worst case: an upstream error that echoes the full request URL, api_key included.
           res.statusCode = 500;
@@ -185,6 +195,15 @@ describe('stdio server against a local API stub', () => {
       });
       expect(tool.description).toMatch('https://webscraping.ai/docs#');
     }
+  });
+
+  test('data returns a 503 structure_processing answer as an error result so the agent retries', async () => {
+    const { result } = await callData({ url: 'https://learning.example/p/1' });
+
+    expect(result.isError).toBe(true);
+    const error = JSON.parse(result.content[0].text.match(/\{[\s\S]*\}/)[0]);
+    expect(error.status_code).toBe(503);
+    expect(error.body).toEqual(DATA_PROCESSING_BODY);
   });
 
   const callData = async (args) => {

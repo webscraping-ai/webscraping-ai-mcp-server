@@ -45,7 +45,7 @@ class WebScrapingAIClient {
       },
       // The API reads repeated keys (selectors=h1&selectors=p); axios's default
       // selectors[]=... is silently ignored and /selected-multiple returns [[]].
-      paramsSerializer: { indexes: null }
+      paramsSerializer: { indexes: null },
     });
 
     this.queue = new PQueue({ concurrency });
@@ -182,15 +182,17 @@ function createSanitizedResponse(content, url, isError = false) {
 // Kept identical to the remote server's webscraping_ai_data tool (McpTools in the
 // Rails app). Sites are examples only: the list grows server-side.
 const DATA_TOOL_DESCRIPTION =
-  'Get structured JSON for a public page on a supported site from its normal URL, e.g. a YouTube video, channel ' +
-  'or playlist, a TikTok video or profile, an X post or profile, a LinkedIn company, job or profile, an Instagram ' +
-  'post, reel or profile, or a Reddit post, subreddit or user. Returns {request_parameters: {url, provider, type}, ' +
-  'parse_status, data}: provider (site) and type (page kind) are detected from the URL, parse_status is ok, ' +
-  'parse_failed or not_found, and data holds snake_case fields whose shape depends on provider and type (null ' +
-  "fields for values the page doesn't expose; data itself can be null when parsing fails). More sites are added " +
-  'on the server over time: an unsupported URL or page type returns a 400 error, not charged, whose message ' +
-  'lists what is supported. For other sites, use webscraping_ai_fields. Priced per site (see ' +
-  'https://webscraping.ai/docs#data), including parse_failed and not_found results; failed fetches are not charged.';
+  'Get structured JSON for any public web page from its normal URL. Returns {request_parameters: {url, provider, type}, ' +
+  'parse_status, data}: provider is the site and type the kind of page, parse_status is ok, parse_failed or not_found, ' +
+  'and data holds snake_case fields whose names stay the same for every page of that kind on that site (null for values ' +
+  "the page doesn't expose; data itself can be null when parsing fails). Some sites have dedicated parsers; for others, the " +
+  'first request for a new kind of page also learns its structure and can take up to about 45 seconds. When learning ' +
+  'takes longer, it returns an error result with status_code 503 and body.error_code "structure_processing" (not ' +
+  'charged): retry after body.retry_after seconds. A 422 ' +
+  '"structure_unavailable" means no structured data was found (not charged); use webscraping_ai_fields to name the values ' +
+  "you want instead. On those sites, redirects to another site aren't followed: they return a 500 with " +
+  'body.error_code "target_redirect" naming the target (not charged). Priced per request (see https://webscraping.ai/docs#data), including parse_failed and not_found ' +
+  'results; failed fetches are not charged.';
 const DATA_BLANK_URL_MESSAGE = 'url must be a non-empty URL';
 const DATA_RESERVED_PARAMS_MESSAGE = 'params must not contain url or api_key';
 const DATA_RESERVED_PARAM_KEYS = new Set(['url', 'api_key', 'key']);
@@ -239,7 +241,7 @@ const commonOptionsSchema = {
   js: z.boolean().optional().default(DEFAULT_JS_RENDERING).describe(`Execute on-page JavaScript using a headless browser (${DEFAULT_JS_RENDERING} by default).`),
   js_timeout: z.number().optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default).`),
   wait_for: z.string().optional().describe('CSS selector to wait for before returning the page content.'),
-  proxy: z.enum(['datacenter', 'residential', 'stealth']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, or stealth (${DEFAULT_PROXY_TYPE} by default). Use residential if the site restricts datacenter traffic, or stealth for the most heavily protected sites with advanced anti-bot detection. Residential and stealth requests cost more than datacenter — see the pricing page.`),
+  proxy: z.enum(['datacenter', 'residential', 'stealth']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, or stealth (${DEFAULT_PROXY_TYPE} by default). Residential and stealth requests cost more than datacenter — see the pricing page.`),
   country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in', 'hk', 'tr']).optional().describe('Country of the proxy to use (US by default).'),
   custom_proxy: z.string().optional().describe('Your own proxy URL in "http://user:password@host:port" format.'),
   device: z.enum(['desktop', 'mobile', 'tablet']).optional().describe('Type of device emulation.'),
@@ -503,9 +505,9 @@ server.registerTool(
   }
 );
 
-// No commonOptionsSchema: /data ignores the scraping options (js, proxy, timeout...).
-// The URL is never checked against a list of sites: supported sites grow on the
-// server, and its free 400 is the source of truth for "unsupported".
+// No commonOptionsSchema: /data picks js and proxy itself (js on where the site
+// needs it, proxy=auto). The URL is never checked client-side: some sites have
+// dedicated parsers, and the server learns the structure of any other page.
 server.registerTool(
   'webscraping_ai_data',
   toolConfig(
@@ -513,19 +515,19 @@ server.registerTool(
     DATA_TOOL_DESCRIPTION,
     {
       url: z.string().min(1).describe(
-        'Normal URL of a public page on a supported site, e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ. ' +
+        'Normal URL of any public web page, e.g. https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html. ' +
           'Sent as-is; the site and page type are detected from it.'
       ),
       country: z.string().optional().describe(
         'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de (us by default).'
       ),
       transcript: z.boolean().optional().describe(
-        "YouTube videos only. Also fetch the video's transcript into data.transcript (null when no matching captions " +
+        "Video pages on sites with a dedicated parser only. Also fetch the video's transcript into data.transcript (null when no matching captions " +
           'are available; false by default). If the transcript fetch fails, the whole request fails with a 500 and is ' +
           'not charged.'
       ),
       transcript_language: z.string().optional().describe(
-        'YouTube videos only, with transcript: true. Caption language to pick, e.g. en, de. Without it, English is ' +
+        'With transcript: true. Caption language to pick, e.g. en, de. Without it, English is ' +
           'preferred, then the first available track; if the video has no captions in that language, data.transcript ' +
           'is null.'
       ),

@@ -2,6 +2,13 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- `webscraping_ai_data` works on any public web page: the API learns the structure of sites without a dedicated parser. The first request for a new kind of page learns its structure and can take up to about 45 seconds; when learning takes longer, or another request is already learning that site, the tool returns an error result with `status_code` 503 and `body.error_code` `structure_processing` (not charged): retry after `body.retry_after` seconds, which can return data. A 422 `structure_unavailable` means the page has no structured data.
+- Tool and README docs no longer list particular sites or describe proxies in terms of bot protection.
+
 ## 1.3.2 — 2026-10-25
 
 ### Changed

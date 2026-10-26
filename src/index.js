@@ -219,7 +219,7 @@ function dataParamsProblem(extra) {
 // Create MCP server
 const server = new McpServer({
   name: 'WebScraping.AI MCP Server',
-  version: '1.3.2'
+  version: '1.4.0'
 });
 
 // Tool metadata + annotations (MCP directory review criteria ask for them).

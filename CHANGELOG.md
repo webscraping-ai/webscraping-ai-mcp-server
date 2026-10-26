@@ -2,7 +2,7 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
-## Unreleased
+## 1.4.0 — 2026-10-26
 
 ### Changed
 

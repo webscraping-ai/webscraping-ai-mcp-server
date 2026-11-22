@@ -158,7 +158,7 @@ export WEBSCRAPING_AI_API_KEY=your-api-key
 
 # Optional - customize behavior (default values)
 export WEBSCRAPING_AI_CONCURRENCY_LIMIT=5
-export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter, residential, stealth or auto
+export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter, residential or stealth
 export WEBSCRAPING_AI_DEFAULT_JS_RENDERING=true
 export WEBSCRAPING_AI_DEFAULT_TIMEOUT=15000
 export WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT=2000

@@ -7,7 +7,7 @@ All notable changes to `webscraping-ai-mcp` are documented in this file.
 ### Added
 
 - `headers` option on the page tools (question, fields, html, text, selected, selected_multiple): an object of strings sent to the target page, e.g. `{"Cookie": "session=some_id"}`, matching the hosted server.
-- `proxy` accepts `auto`: tries datacenter, then residential, then stealth in one request and bills only the tier that worked (can't be combined with `custom_proxy`). `server.json` lists `stealth` and `auto` as `WEBSCRAPING_AI_DEFAULT_PROXY_TYPE` choices too.
+- `proxy` accepts `auto`: tries datacenter, then residential, then stealth in one request and bills only the tier that worked (can't be combined with `custom_proxy`). `server.json` now lists `stealth` as a `WEBSCRAPING_AI_DEFAULT_PROXY_TYPE` choice. `auto` is a per-call option only, not offered as a default, because a default of `auto` would make every `custom_proxy` call fail.
 
 ### Changed
 

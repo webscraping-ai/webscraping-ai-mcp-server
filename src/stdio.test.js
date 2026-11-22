@@ -685,7 +685,11 @@ describe('stdio server with content sandboxing on', () => {
   });
 });
 
-describe('stdio server with default timeouts above the schema bounds', () => {
+describe.each([
+  ['above the schema bounds', '30000', '30000', 25000, 20000],
+  ['below the schema bounds', '0', '-5', 15000, 2000],
+  ['not numbers', 'abc', '1e', 15000, 2000],
+])('stdio server with default timeouts %s', (_label, timeoutEnv, jsTimeoutEnv, timeout, jsTimeout) => {
   let client;
 
   beforeAll(async () => {
@@ -697,8 +701,8 @@ describe('stdio server with default timeouts above the schema bounds', () => {
         ...getDefaultEnvironment(),
         WEBSCRAPING_AI_API_KEY: API_KEY,
         WEBSCRAPING_AI_API_URL: 'http://127.0.0.1:9',
-        WEBSCRAPING_AI_DEFAULT_TIMEOUT: '30000',
-        WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT: '30000',
+        WEBSCRAPING_AI_DEFAULT_TIMEOUT: timeoutEnv,
+        WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT: jsTimeoutEnv,
       },
       stderr: 'ignore',
     });
@@ -710,11 +714,11 @@ describe('stdio server with default timeouts above the schema bounds', () => {
     await client?.close();
   });
 
-  test('advertises the clamped defaults, which the schema accepts', async () => {
+  test('advertises in-range defaults', async () => {
     const { tools } = await client.listTools();
     const props = tools.find((t) => t.name === 'webscraping_ai_html').inputSchema.properties;
-    expect(props.timeout.default).toBe(25000);
-    expect(props.timeout.description).toContain('25000 by default');
-    expect(props.js_timeout.default).toBe(20000);
+    expect(props.timeout.default).toBe(timeout);
+    expect(props.timeout.description).toContain(`${timeout} by default`);
+    expect(props.js_timeout.default).toBe(jsTimeout);
   });
 });

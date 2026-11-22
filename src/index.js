@@ -16,10 +16,15 @@ const WEBSCRAPING_AI_API_URL = process.env.WEBSCRAPING_AI_API_URL || 'https://ap
 const CONCURRENCY_LIMIT = Number(process.env.WEBSCRAPING_AI_CONCURRENCY_LIMIT || 5);
 const DEFAULT_PROXY_TYPE = process.env.WEBSCRAPING_AI_DEFAULT_PROXY_TYPE || 'residential';
 const DEFAULT_JS_RENDERING = process.env.WEBSCRAPING_AI_DEFAULT_JS_RENDERING !== 'false';
-// Clamped to the schema bounds below (the API caps larger values anyway), so the
-// advertised default is always a value the schema accepts back.
-const DEFAULT_TIMEOUT = Math.min(Number(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000), 25000);
-const DEFAULT_JS_TIMEOUT = Math.min(Number(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000), 20000);
+// Kept within the schema bounds below (the API caps larger values anyway), so the
+// advertised default is always a value the schema accepts back. A non-numeric or
+// non-positive value falls back to the built-in default.
+function envMs(value, fallback, max) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 1 ? Math.min(n, max) : fallback;
+}
+const DEFAULT_TIMEOUT = envMs(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000, 15000, 25000);
+const DEFAULT_JS_TIMEOUT = envMs(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000, 2000, 20000);
 
 // Validate required environment variables
 if (!WEBSCRAPING_AI_API_KEY) {

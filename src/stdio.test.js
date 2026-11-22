@@ -555,6 +555,47 @@ describe('stdio server against a local API stub', () => {
     expect(url.searchParams.getAll('selectors')).toEqual(['h1', 'p']);
     expect(url.search).not.toContain('selectors%5B%5D');
   });
+
+  test('headers go out as bracketed keys next to the scraping options', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_selected_multiple',
+      arguments: {
+        url: 'https://example.com',
+        selectors: ['h1'],
+        headers: { Cookie: 'session=some_id', 'X-Foo': 'a&b=c' },
+        proxy: 'auto',
+      },
+    });
+
+    expect(result.isError).toBeUndefined();
+    const url = lastRequest();
+    expect(url.searchParams.get('headers[Cookie]')).toBe('session=some_id');
+    expect(url.searchParams.get('headers[X-Foo]')).toBe('a&b=c');
+    expect(url.searchParams.get('proxy')).toBe('auto');
+    expect(url.searchParams.get('api_key')).toBe(API_KEY);
+    expect(url.searchParams.getAll('api_key')).toHaveLength(1);
+  });
+
+  test.each([
+    [{ timeout: 25001 }],
+    [{ timeout: 0 }],
+    [{ js_timeout: 20001 }],
+    [{ js_timeout: 0 }],
+    [{ headers: { Cookie: 1 } }],
+  ])('rejects out-of-range or mistyped options %j without calling the API', async (extra) => {
+    const before = requests.length;
+    let outcome;
+    try {
+      outcome = await client.callTool({
+        name: 'webscraping_ai_selected_multiple',
+        arguments: { url: 'https://example.com', selectors: ['h1'], ...extra },
+      });
+    } catch (e) {
+      outcome = e;
+    }
+    if (!(outcome instanceof Error)) expect(outcome.isError).toBe(true);
+    expect(requests.length).toBe(before);
+  });
 });
 
 describe('stdio server with content sandboxing on', () => {

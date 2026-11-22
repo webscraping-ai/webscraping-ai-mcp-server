@@ -237,11 +237,12 @@ function toolConfig(title, description, inputSchema, openWorldHint = true) {
 
 // Common options schema for all tools
 const commonOptionsSchema = {
-  timeout: z.number().optional().default(DEFAULT_TIMEOUT).describe(`Maximum web page retrieval time in ms (${DEFAULT_TIMEOUT} by default, maximum is 30000).`),
+  headers: z.record(z.string(), z.string()).optional().describe('HTTP headers to pass to the target page, e.g. {"Cookie": "session=some_id"}.'),
+  timeout: z.number().min(1).max(25000).optional().default(DEFAULT_TIMEOUT).describe(`Maximum web page retrieval time in ms (${DEFAULT_TIMEOUT} by default, maximum is 25000).`),
   js: z.boolean().optional().default(DEFAULT_JS_RENDERING).describe(`Execute on-page JavaScript using a headless browser (${DEFAULT_JS_RENDERING} by default).`),
-  js_timeout: z.number().optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default).`),
+  js_timeout: z.number().min(1).max(20000).optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default, maximum is 20000).`),
   wait_for: z.string().optional().describe('CSS selector to wait for before returning the page content.'),
-  proxy: z.enum(['datacenter', 'residential', 'stealth']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, or stealth (${DEFAULT_PROXY_TYPE} by default). Residential and stealth requests cost more than datacenter — see the pricing page.`),
+  proxy: z.enum(['datacenter', 'residential', 'stealth', 'auto']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, stealth or auto (${DEFAULT_PROXY_TYPE} by default). Residential and stealth requests cost more than datacenter — see the pricing page. auto tries datacenter, then residential, then stealth in one request and bills only the tier that worked.`),
   country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in', 'hk', 'tr']).optional().describe('Country of the proxy to use (US by default).'),
   custom_proxy: z.string().optional().describe('Your own proxy URL in "http://user:password@host:port" format.'),
   device: z.enum(['desktop', 'mobile', 'tablet']).optional().describe('Type of device emulation.'),
@@ -519,7 +520,9 @@ server.registerTool(
           'Sent as-is; the site and page type are detected from it.'
       ),
       country: z.string().optional().describe(
-        'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de (us by default).'
+        'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de. Without it, pages on a country site with a ' +
+          "dedicated parser (e.g. uk.indeed.com) use that site's country and everything else uses us. Some dedicated parsers use a " +
+          "fixed route and ignore it; their results always follow the URL's site."
       ),
       transcript: z.boolean().optional().describe(
         "Video pages on sites with a dedicated parser only. Also fetch the video's transcript into data.transcript (null when no matching captions " +

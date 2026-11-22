@@ -487,7 +487,7 @@ Some sites have dedicated parsers. For other sites, the first request for a new 
 Parameters:
 
 - `url` (required, non-blank; sent as-is).
-- `country`: Two-letter country code of the proxy used to fetch the page, e.g. `us`, `gb`, `de`. Without it, pages on a country site with a dedicated parser (e.g. `uk.indeed.com`) use that site's country and everything else uses `us`. Some dedicated parsers use a fixed route and ignore it; their results always follow the URL's site.
+- `country`: Two-letter country code of the proxy used to fetch the page, e.g. `us`, `gb`, `de`. Without it, Indeed country sites (e.g. `uk.indeed.com`) use that site's country and everything else uses `us`. Some dedicated parsers use a fixed route and ignore it; their results always follow the URL's site.
 - `transcript` (boolean): Video pages on sites with a dedicated parser only. Also fetch the video's transcript into `data.transcript`. It's null when no matching captions are available. If the transcript fetch itself fails, the whole request fails with a 500 and is not charged.
 - `transcript_language`: With `transcript: true`. Caption language to pick, e.g. `en` or `de`. Without it, English is preferred, then the first available track. If the video has no captions in that language, `data.transcript` is null.
 - `params`: object of extra query parameters (string, number or boolean values) sent as-is, for site-specific parameters added after this release. Keys must match `[A-Za-z0-9_-]{1,64}` and must not be `url`, `api_key`, `key`, one of the parameters above, or a `from_*` marker; any of those is rejected with an error result and no request is made.

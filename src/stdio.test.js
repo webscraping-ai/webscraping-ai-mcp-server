@@ -684,3 +684,37 @@ describe('stdio server with content sandboxing on', () => {
     expect(result.content[0].text).toBe(JSON.stringify(LOCATIONS_BODY, null, 2));
   });
 });
+
+describe('stdio server with default timeouts above the schema bounds', () => {
+  let client;
+
+  beforeAll(async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [serverPath],
+      cwd: os.tmpdir(),
+      env: {
+        ...getDefaultEnvironment(),
+        WEBSCRAPING_AI_API_KEY: API_KEY,
+        WEBSCRAPING_AI_API_URL: 'http://127.0.0.1:9',
+        WEBSCRAPING_AI_DEFAULT_TIMEOUT: '30000',
+        WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT: '30000',
+      },
+      stderr: 'ignore',
+    });
+    client = new Client({ name: 'webscraping-ai-stdio-test', version: '1.0.0' });
+    await client.connect(transport);
+  }, 20000);
+
+  afterAll(async () => {
+    await client?.close();
+  });
+
+  test('advertises the clamped defaults, which the schema accepts', async () => {
+    const { tools } = await client.listTools();
+    const props = tools.find((t) => t.name === 'webscraping_ai_html').inputSchema.properties;
+    expect(props.timeout.default).toBe(25000);
+    expect(props.timeout.description).toContain('25000 by default');
+    expect(props.js_timeout.default).toBe(20000);
+  });
+});

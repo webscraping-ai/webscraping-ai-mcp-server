@@ -16,8 +16,10 @@ const WEBSCRAPING_AI_API_URL = process.env.WEBSCRAPING_AI_API_URL || 'https://ap
 const CONCURRENCY_LIMIT = Number(process.env.WEBSCRAPING_AI_CONCURRENCY_LIMIT || 5);
 const DEFAULT_PROXY_TYPE = process.env.WEBSCRAPING_AI_DEFAULT_PROXY_TYPE || 'residential';
 const DEFAULT_JS_RENDERING = process.env.WEBSCRAPING_AI_DEFAULT_JS_RENDERING !== 'false';
-const DEFAULT_TIMEOUT = Number(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000);
-const DEFAULT_JS_TIMEOUT = Number(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000);
+// Clamped to the schema bounds below (the API caps larger values anyway), so the
+// advertised default is always a value the schema accepts back.
+const DEFAULT_TIMEOUT = Math.min(Number(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000), 25000);
+const DEFAULT_JS_TIMEOUT = Math.min(Number(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000), 20000);
 
 // Validate required environment variables
 if (!WEBSCRAPING_AI_API_KEY) {

@@ -2,6 +2,20 @@
 
 All notable changes to `webscraping-ai-mcp` are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- `headers` option on the page tools (question, fields, html, text, selected, selected_multiple): an object of strings sent to the target page, e.g. `{"Cookie": "session=some_id"}`, matching the hosted server.
+- `proxy` accepts `auto`: tries datacenter, then residential, then stealth in one request and bills only the tier that worked (can't be combined with `custom_proxy`). `server.json` now lists `stealth` as a `WEBSCRAPING_AI_DEFAULT_PROXY_TYPE` choice. `auto` is a per-call option only, not offered as a default, because a default of `auto` would make every `custom_proxy` call fail.
+
+### Changed
+
+- `timeout` is limited to 1–25000 ms (the API caps larger values at 25000; the description used to say 30000) and `js_timeout` to 1–20000 ms, as on the hosted server. Out-of-range values are rejected before any request is made. `WEBSCRAPING_AI_DEFAULT_TIMEOUT`/`WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT` values above those limits are lowered to 25000/20000, and non-numeric or non-positive values fall back to 15000/2000.
+- `webscraping_ai_data`'s `country` no longer claims a fixed `us` default: Indeed country sites (e.g. `uk.indeed.com`) use that site's country, and some dedicated parsers ignore it.
+- README: `/data` lists the retryable, uncharged 500 `timeout`/`ai_unavailable` errors and its example shows type `book` and currency `£`; examples use `"timeout": 25000`; `hk`/`tr` added to the country list; the `webscraping_ai_text` and `webscraping_ai_selected` example responses show what the tools' default formats return (`text_format: json` and `{"html": ...}`).
+- Dev smoke script: `webscraping_ai_data` on a site without a dedicated parser also accepts a 500 `ai_unavailable`.
+
 ## 1.4.0 — 2026-10-26
 
 ### Changed

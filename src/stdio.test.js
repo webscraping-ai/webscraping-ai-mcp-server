@@ -555,6 +555,47 @@ describe('stdio server against a local API stub', () => {
     expect(url.searchParams.getAll('selectors')).toEqual(['h1', 'p']);
     expect(url.search).not.toContain('selectors%5B%5D');
   });
+
+  test('headers go out as bracketed keys next to the scraping options', async () => {
+    const result = await client.callTool({
+      name: 'webscraping_ai_selected_multiple',
+      arguments: {
+        url: 'https://example.com',
+        selectors: ['h1'],
+        headers: { Cookie: 'session=some_id', 'X-Foo': 'a&b=c' },
+        proxy: 'auto',
+      },
+    });
+
+    expect(result.isError).toBeUndefined();
+    const url = lastRequest();
+    expect(url.searchParams.get('headers[Cookie]')).toBe('session=some_id');
+    expect(url.searchParams.get('headers[X-Foo]')).toBe('a&b=c');
+    expect(url.searchParams.get('proxy')).toBe('auto');
+    expect(url.searchParams.get('api_key')).toBe(API_KEY);
+    expect(url.searchParams.getAll('api_key')).toHaveLength(1);
+  });
+
+  test.each([
+    [{ timeout: 25001 }],
+    [{ timeout: 0 }],
+    [{ js_timeout: 20001 }],
+    [{ js_timeout: 0 }],
+    [{ headers: { Cookie: 1 } }],
+  ])('rejects out-of-range or mistyped options %j without calling the API', async (extra) => {
+    const before = requests.length;
+    let outcome;
+    try {
+      outcome = await client.callTool({
+        name: 'webscraping_ai_selected_multiple',
+        arguments: { url: 'https://example.com', selectors: ['h1'], ...extra },
+      });
+    } catch (e) {
+      outcome = e;
+    }
+    if (!(outcome instanceof Error)) expect(outcome.isError).toBe(true);
+    expect(requests.length).toBe(before);
+  });
 });
 
 describe('stdio server with content sandboxing on', () => {
@@ -641,5 +682,43 @@ describe('stdio server with content sandboxing on', () => {
     });
 
     expect(result.content[0].text).toBe(JSON.stringify(LOCATIONS_BODY, null, 2));
+  });
+});
+
+describe.each([
+  ['above the schema bounds', '30000', '30000', 25000, 20000],
+  ['below the schema bounds', '0', '-5', 15000, 2000],
+  ['not numbers', 'abc', '1e', 15000, 2000],
+])('stdio server with default timeouts %s', (_label, timeoutEnv, jsTimeoutEnv, timeout, jsTimeout) => {
+  let client;
+
+  beforeAll(async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [serverPath],
+      cwd: os.tmpdir(),
+      env: {
+        ...getDefaultEnvironment(),
+        WEBSCRAPING_AI_API_KEY: API_KEY,
+        WEBSCRAPING_AI_API_URL: 'http://127.0.0.1:9',
+        WEBSCRAPING_AI_DEFAULT_TIMEOUT: timeoutEnv,
+        WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT: jsTimeoutEnv,
+      },
+      stderr: 'ignore',
+    });
+    client = new Client({ name: 'webscraping-ai-stdio-test', version: '1.0.0' });
+    await client.connect(transport);
+  }, 20000);
+
+  afterAll(async () => {
+    await client?.close();
+  });
+
+  test('advertises in-range defaults', async () => {
+    const { tools } = await client.listTools();
+    const props = tools.find((t) => t.name === 'webscraping_ai_html').inputSchema.properties;
+    expect(props.timeout.default).toBe(timeout);
+    expect(props.timeout.description).toContain(`${timeout} by default`);
+    expect(props.js_timeout.default).toBe(jsTimeout);
   });
 });

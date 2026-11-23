@@ -16,8 +16,15 @@ const WEBSCRAPING_AI_API_URL = process.env.WEBSCRAPING_AI_API_URL || 'https://ap
 const CONCURRENCY_LIMIT = Number(process.env.WEBSCRAPING_AI_CONCURRENCY_LIMIT || 5);
 const DEFAULT_PROXY_TYPE = process.env.WEBSCRAPING_AI_DEFAULT_PROXY_TYPE || 'residential';
 const DEFAULT_JS_RENDERING = process.env.WEBSCRAPING_AI_DEFAULT_JS_RENDERING !== 'false';
-const DEFAULT_TIMEOUT = Number(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000);
-const DEFAULT_JS_TIMEOUT = Number(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000);
+// Kept within the schema bounds below (the API caps larger values anyway), so the
+// advertised default is always a value the schema accepts back. A non-numeric or
+// non-positive value falls back to the built-in default.
+function envMs(value, fallback, max) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 1 ? Math.min(n, max) : fallback;
+}
+const DEFAULT_TIMEOUT = envMs(process.env.WEBSCRAPING_AI_DEFAULT_TIMEOUT || 15000, 15000, 25000);
+const DEFAULT_JS_TIMEOUT = envMs(process.env.WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT || 2000, 2000, 20000);
 
 // Validate required environment variables
 if (!WEBSCRAPING_AI_API_KEY) {
@@ -237,11 +244,12 @@ function toolConfig(title, description, inputSchema, openWorldHint = true) {
 
 // Common options schema for all tools
 const commonOptionsSchema = {
-  timeout: z.number().optional().default(DEFAULT_TIMEOUT).describe(`Maximum web page retrieval time in ms (${DEFAULT_TIMEOUT} by default, maximum is 30000).`),
+  headers: z.record(z.string(), z.string()).optional().describe('HTTP headers to pass to the target page, e.g. {"Cookie": "session=some_id"}.'),
+  timeout: z.number().min(1).max(25000).optional().default(DEFAULT_TIMEOUT).describe(`Maximum web page retrieval time in ms (${DEFAULT_TIMEOUT} by default, maximum is 25000).`),
   js: z.boolean().optional().default(DEFAULT_JS_RENDERING).describe(`Execute on-page JavaScript using a headless browser (${DEFAULT_JS_RENDERING} by default).`),
-  js_timeout: z.number().optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default).`),
+  js_timeout: z.number().min(1).max(20000).optional().default(DEFAULT_JS_TIMEOUT).describe(`Maximum JavaScript rendering time in ms (${DEFAULT_JS_TIMEOUT} by default, maximum is 20000).`),
   wait_for: z.string().optional().describe('CSS selector to wait for before returning the page content.'),
-  proxy: z.enum(['datacenter', 'residential', 'stealth']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, or stealth (${DEFAULT_PROXY_TYPE} by default). Residential and stealth requests cost more than datacenter — see the pricing page.`),
+  proxy: z.enum(['datacenter', 'residential', 'stealth', 'auto']).optional().default(DEFAULT_PROXY_TYPE).describe(`Type of proxy: datacenter, residential, stealth or auto (${DEFAULT_PROXY_TYPE} by default). Residential and stealth requests cost more than datacenter — see the pricing page. auto tries datacenter, then residential, then stealth in one request and bills only the tier that worked.`),
   country: z.enum(['us', 'gb', 'de', 'it', 'fr', 'ca', 'es', 'ru', 'jp', 'kr', 'in', 'hk', 'tr']).optional().describe('Country of the proxy to use (US by default).'),
   custom_proxy: z.string().optional().describe('Your own proxy URL in "http://user:password@host:port" format.'),
   device: z.enum(['desktop', 'mobile', 'tablet']).optional().describe('Type of device emulation.'),
@@ -519,7 +527,9 @@ server.registerTool(
           'Sent as-is; the site and page type are detected from it.'
       ),
       country: z.string().optional().describe(
-        'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de (us by default).'
+        'Two-letter country code of the proxy used to fetch the page, e.g. us, gb, de. Without it, Indeed country sites ' +
+          "(e.g. uk.indeed.com) use that site's country and everything else uses us. Some dedicated parsers use a " +
+          "fixed route and ignore it; their results always follow the URL's site."
       ),
       transcript: z.boolean().optional().describe(
         "Video pages on sites with a dedicated parser only. Also fetch the video's transcript into data.transcript (null when no matching captions " +

@@ -11,7 +11,7 @@
 
 A Model Context Protocol (MCP) server implementation that integrates with
 [WebScraping.AI](https://webscraping.ai) for web data extraction capabilities —
-Chromium JavaScript rendering, rotating datacenter/residential/stealth proxies,
+Chromium JavaScript rendering, rotating datacenter/residential/stealth proxies (or `auto` to try them in turn),
 and AI-powered question answering and structured field extraction on any page.
 
 [Sign up](https://webscraping.ai/auth/sign_up) to get an API key — a free
@@ -27,7 +27,7 @@ trial, no credit card required. See the
 - CSS selector-based content extraction
 - Google search results (SERP) as parsed JSON, from a chosen location and up to 5 pages per call
 - Structured JSON for any public web page from its normal URL
-- Multiple proxy types (datacenter, residential, stealth) with country selection
+- Multiple proxy types (datacenter, residential, stealth, auto) with country selection
 - JavaScript rendering using headless Chrome/Chromium
 - Concurrent request management with rate limiting
 - Custom JavaScript execution on target pages
@@ -121,8 +121,8 @@ Add this to your `claude_desktop_config.json`:
 - `WEBSCRAPING_AI_CONCURRENCY_LIMIT`: Maximum number of concurrent requests (default: `5`)
 - `WEBSCRAPING_AI_DEFAULT_PROXY_TYPE`: Type of proxy to use (default: `residential`)
 - `WEBSCRAPING_AI_DEFAULT_JS_RENDERING`: Enable/disable JavaScript rendering (default: `true`)
-- `WEBSCRAPING_AI_DEFAULT_TIMEOUT`: Maximum web page retrieval time in ms (default: `15000`, max: `30000`)
-- `WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT`: Maximum JavaScript rendering time in ms (default: `2000`)
+- `WEBSCRAPING_AI_DEFAULT_TIMEOUT`: Maximum web page retrieval time in ms (default: `15000`, max: `25000`)
+- `WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT`: Maximum JavaScript rendering time in ms (default: `2000`, max: `20000`)
 
 #### Security Configuration
 
@@ -158,7 +158,7 @@ export WEBSCRAPING_AI_API_KEY=your-api-key
 
 # Optional - customize behavior (default values)
 export WEBSCRAPING_AI_CONCURRENCY_LIMIT=5
-export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter, residential, or stealth
+export WEBSCRAPING_AI_DEFAULT_PROXY_TYPE=residential # datacenter, residential or stealth
 export WEBSCRAPING_AI_DEFAULT_JS_RENDERING=true
 export WEBSCRAPING_AI_DEFAULT_TIMEOUT=15000
 export WEBSCRAPING_AI_DEFAULT_JS_TIMEOUT=2000
@@ -176,7 +176,7 @@ Ask questions about web page content.
   "arguments": {
     "url": "https://example.com",
     "question": "What is the main topic of this page?",
-    "timeout": 30000,
+    "timeout": 25000,
     "js": true,
     "js_timeout": 2000,
     "wait_for": ".content-loaded",
@@ -214,7 +214,7 @@ Extract structured data from web pages based on instructions.
       "description": "Extract the product description"
     },
     "js": true,
-    "timeout": 30000
+    "timeout": 25000
   }
 }
 ```
@@ -242,7 +242,7 @@ Get the full HTML of a web page with JavaScript rendering.
   "arguments": {
     "url": "https://example.com",
     "js": true,
-    "timeout": 30000,
+    "timeout": 25000,
     "wait_for": "#content-loaded"
   }
 }
@@ -271,7 +271,7 @@ Extract the visible text content from a web page.
   "arguments": {
     "url": "https://example.com",
     "js": true,
-    "timeout": 30000
+    "timeout": 25000
   }
 }
 ```
@@ -283,7 +283,7 @@ Example response:
   "content": [
     {
       "type": "text",
-      "text": "Example Domain\nThis domain is for use in illustrative examples in documents..."
+      "text": "{\"title\":\"Example Domain\",\"description\":\"\",\"content\":\"# Example Domain\\n\\nThis domain is for use in illustrative examples in documents...\"}"
     }
   ]
 }
@@ -300,7 +300,7 @@ Extract content from a specific element using a CSS selector.
     "url": "https://example.com",
     "selector": "div.main-content",
     "js": true,
-    "timeout": 30000
+    "timeout": 25000
   }
 }
 ```
@@ -312,7 +312,7 @@ Example response:
   "content": [
     {
       "type": "text",
-      "text": "<div class=\"main-content\">This is the main content of the page.</div>"
+      "text": "{\"html\":\"<div class=\\\"main-content\\\">This is the main content of the page.</div>\"}"
     }
   ]
 }
@@ -329,7 +329,7 @@ Extract content from multiple elements using CSS selectors.
     "url": "https://example.com",
     "selectors": ["div.header", "div.product-list", "div.footer"],
     "js": true,
-    "timeout": 30000
+    "timeout": 25000
   }
 }
 ```
@@ -482,12 +482,12 @@ Parameters: `q` (part of a location name; without it, the most populous location
 
 Get structured JSON for any public web page from its normal URL. The site (`provider`) and the kind of page (`type`) are worked out for you, and `data` holds snake_case fields whose names stay the same for every page of that kind on that site. The tool never checks the URL against a list.
 
-Some sites have dedicated parsers. For other sites, the first request for a new kind of page also learns the page's structure, so it can take up to about 45 seconds. When learning takes longer, or another request is already learning that site, the tool returns an error result with `status_code` 503 and `body.error_code` `structure_processing`. It isn't charged: retry after `body.retry_after` seconds, which can return data (if learning failed meanwhile, the retry may learn again or return a 422). Once learned, pages of that kind return data without the wait. A 422 with `structure_unavailable` means no structured data was found on the page (also not charged); use `webscraping_ai_fields` to name the values you want instead. Redirects within the same site (http→https, `www`, trailing slash) are followed; a redirect to another site returns a 500 with `body.error_code` `target_redirect` naming the target (not charged). Starting too many new kinds of pages in an hour returns a 429 `rate_limited`. Priced per request (see [pricing](https://webscraping.ai/docs#data)), including `parse_failed` and `not_found` results; failed fetches are not charged. The scraping options below don't apply.
+Some sites have dedicated parsers. For other sites, the first request for a new kind of page also learns the page's structure, so it can take up to about 45 seconds. When learning takes longer, or another request is already learning that site, the tool returns an error result with `status_code` 503 and `body.error_code` `structure_processing`. It isn't charged: retry after `body.retry_after` seconds, which can return data (if learning failed meanwhile, the retry may learn again or return a 422). Once learned, pages of that kind return data without the wait. A 422 with `structure_unavailable` means no structured data was found on the page (also not charged); use `webscraping_ai_fields` to name the values you want instead. Redirects within the same site (http→https, `www`, trailing slash) are followed; a redirect to another site returns a 500 with `body.error_code` `target_redirect` naming the target (not charged). Starting too many new kinds of pages in an hour returns a 429 `rate_limited`. A 500 with `body.error_code` `timeout`, or `ai_unavailable` (the AI model was busy), is not charged and can be retried. Priced per request (see [pricing](https://webscraping.ai/docs#data)), including `parse_failed` and `not_found` results; failed fetches are not charged. The scraping options below don't apply.
 
 Parameters:
 
 - `url` (required, non-blank; sent as-is).
-- `country`: Two-letter country code of the proxy used to fetch the page, `us` by default.
+- `country`: Two-letter country code of the proxy used to fetch the page, e.g. `us`, `gb`, `de`. Without it, Indeed country sites (e.g. `uk.indeed.com`) use that site's country and everything else uses `us`. Some dedicated parsers use a fixed route and ignore it; their results always follow the URL's site.
 - `transcript` (boolean): Video pages on sites with a dedicated parser only. Also fetch the video's transcript into `data.transcript`. It's null when no matching captions are available. If the transcript fetch itself fails, the whole request fails with a 500 and is not charged.
 - `transcript_language`: With `transcript: true`. Caption language to pick, e.g. `en` or `de`. Without it, English is preferred, then the first available track. If the video has no captions in that language, `data.transcript` is null.
 - `params`: object of extra query parameters (string, number or boolean values) sent as-is, for site-specific parameters added after this release. Keys must match `[A-Za-z0-9_-]{1,64}` and must not be `url`, `api_key`, `key`, one of the parameters above, or a `from_*` marker; any of those is rejected with an error result and no request is made.
@@ -509,13 +509,13 @@ Parameters:
   "request_parameters": {
     "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
     "provider": "toscrape.com",
-    "type": "product"
+    "type": "book"
   },
   "parse_status": "ok",
   "data": {
     "title": "A Light in the Attic",
     "price": 51.77,
-    "currency": "GBP",
+    "currency": "£",
     "availability": "In stock (22 available)"
   }
 }
@@ -557,12 +557,13 @@ Example response:
 
 The following options can be used with all scraping tools (not with `webscraping_ai_serp`, `webscraping_ai_serp_locations`, `webscraping_ai_data` or `webscraping_ai_account`, which take their own parameters):
 
-- `timeout`: Maximum web page retrieval time in ms (15000 by default, maximum is 30000)
+- `headers`: HTTP headers to pass to the target page, as an object of strings, e.g. `{"Cookie": "session=some_id"}`
+- `timeout`: Maximum web page retrieval time in ms (15000 by default, maximum is 25000)
 - `js`: Execute on-page JavaScript using a headless browser (true by default)
-- `js_timeout`: Maximum JavaScript rendering time in ms (2000 by default)
+- `js_timeout`: Maximum JavaScript rendering time in ms (2000 by default, maximum is 20000)
 - `wait_for`: CSS selector to wait for before returning the page content
-- `proxy`: Type of proxy: `datacenter`, `residential`, or `stealth` (`residential` by default). Residential and stealth cost more than datacenter, see the pricing page.
-- `country`: Country of the proxy to use (US by default). Supported countries: us, gb, de, it, fr, ca, es, ru, jp, kr, in
+- `proxy`: Type of proxy: `datacenter`, `residential`, `stealth` or `auto` (`residential` by default). Residential and stealth cost more than datacenter, see the pricing page. `auto` tries datacenter, then residential, then stealth in one request and bills only the tier that worked; it can't be combined with `custom_proxy`.
+- `country`: Country of the proxy to use (US by default). Supported countries: us, gb, de, it, fr, ca, es, ru, jp, kr, in, hk, tr
 - `custom_proxy`: Your own proxy URL in "http://user:password@host:port" format
 - `device`: Type of device emulation. Supported values: desktop, mobile, tablet
 - `error_on_404`: Return error on 404 HTTP status on the target page (false by default)
@@ -652,7 +653,7 @@ npx @modelcontextprotocol/inspector node src/index.js
 
 ### Live smoke test
 
-`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 10 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines", then again with `location: "Austin, TX", pages: 2` and must report a `search_parameters.location_used` containing "Austin"; serp_locations looks up "austin" with `limit: 3` and the first `canonical_name` must contain "Austin"; data fetches a page on a site with a dedicated parser, then calls `https://example.com/` and expects data, a 503 `structure_processing` or a 422 `structure_unavailable`), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, selected_multiple must match at least one element, and the dedicated-parser data call must return `parse_status` `ok` and a non-empty `data.title`. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
+`bin/smoke.js` spawns the real server (`node src/index.js`) over stdio with the MCP SDK client and calls the live API. It checks that `tools/list` returns all 10 tools, calls each tool once on `https://example.com` (serp searches for "coffee machines", then again with `location: "Austin, TX", pages: 2` and must report a `search_parameters.location_used` containing "Austin"; serp_locations looks up "austin" with `limit: 3` and the first `canonical_name` must contain "Austin"; data fetches a page on a site with a dedicated parser, then calls `https://example.com/` and expects data, a 503 `structure_processing`, a 422 `structure_unavailable` or a 500 `timeout`/`ai_unavailable`), then restarts the server with `WEBSCRAPING_AI_ENABLE_CONTENT_SANDBOXING=true` and checks that the sandbox banner and `Source:` line appear on a `text` result and a `serp` result (for serp the source is the Google search URL). A tool result with `isError: true` counts as a failure, and so do wrong-but-successful results: serp must return non-empty `organic_results` with `search_parameters.q` equal to the query, selected_multiple must match at least one element, and the dedicated-parser data call must return `parse_status` `ok` and a non-empty `data.title`. FAIL lines redact the API key. The script prints `ok`/`FAIL` for each check and exits non-zero if any check fails.
 
 ```bash
 WEBSCRAPING_AI_API_KEY=your-key npm run smoke

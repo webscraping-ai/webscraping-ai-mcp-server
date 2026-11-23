@@ -37,7 +37,7 @@
           "description": "Default proxy type for requests",
           "isRequired": false,
           "format": "string",
-          "choices": ["residential", "datacenter"],
+          "choices": ["residential", "datacenter", "stealth"],
           "default": "residential"
         },
         {

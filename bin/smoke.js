@@ -245,11 +245,11 @@ try {
   const learned = !result.isError && parsed?.request_parameters;
   const pending = result.isError && ((parsed?.status_code === 503 && errorCode === 'structure_processing') ||
     (parsed?.status_code === 422 && errorCode === 'structure_unavailable') ||
-    (parsed?.status_code === 500 && errorCode === 'timeout'));
+    (parsed?.status_code === 500 && (errorCode === 'timeout' || errorCode === 'ai_unavailable')));
   if (learned || pending) {
     ok('data:any-site', text);
   } else {
-    fail('data:any-site', `expected data, a 503 structure_processing, a 422 structure_unavailable or a 500 timeout: ${text}`);
+    fail('data:any-site', `expected data, a 503 structure_processing, a 422 structure_unavailable or a 500 timeout/ai_unavailable: ${text}`);
   }
 } catch (err) {
   fail('data:any-site', `${err?.constructor?.name ?? 'Error'}: ${err?.message ?? String(err)}`);

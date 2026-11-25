@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/webscraping-ai-webscraping-ai-mcp-server-badge.png)](https://mseep.ai/app/webscraping-ai-webscraping-ai-mcp-server)
+
 # WebScraping.AI MCP Server
 
 [![npm](https://img.shields.io/npm/v/webscraping-ai-mcp.svg)](https://www.npmjs.com/package/webscraping-ai-mcp)

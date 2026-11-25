@@ -1,4 +1,5 @@
 # WebScraping.AI MCP Server
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/webscraping-ai/webscraping-ai-mcp-server)](https://archestra.ai/mcp-catalog/webscraping-ai__webscraping-ai-mcp-server)
 
 [![npm](https://img.shields.io/npm/v/webscraping-ai-mcp.svg)](https://www.npmjs.com/package/webscraping-ai-mcp)
 [![CI](https://github.com/webscraping-ai/webscraping-ai-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/webscraping-ai/webscraping-ai-mcp-server/actions/workflows/ci.yml)
